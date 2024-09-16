@@ -1,3 +1,11 @@
 node_modules
+dist
+.vscode
 npm-debug.log
-.env
+yarn-error.log
+.nyc_output
+coverage
+coverage.lcov
+*.swp
+*.bak
+*.tgz
