@@ -1,0 +1,23 @@
+DELETE FROM tourist_entities;
+DELETE FROM seasons_relation;
+DELETE FROM operating_hours;
+DELETE FROM admin_tokens;
+ALTER TABLE tourist_entities AUTO_INCREMENT = 1;
+ALTER TABLE seasons_relation AUTO_INCREMENT = 1;
+ALTER TABLE operating_hours AUTO_INCREMENT = 1;
+ALTER TABLE admin_tokens AUTO_INCREMENT = 1;
+
+
+-- กำหนดฤดูกาลสำหรับที่พัก ร้านอาหาร และร้านค้าของฝาก
+INSERT INTO seasons_relation (season_id, tourism_entities_id)
+SELECT s.id, te.id
+FROM seasons s
+JOIN tourist_entities te ON te.category_id IN (2, 3, 4)
+WHERE s.id IN (1, 2, 3, 4);
+
+-- กำหนดฤดูกาลสำหรับสถานที่ท่องเที่ยว ยกเว้นตลอดทั้งปี
+INSERT INTO seasons_relation (season_id, tourism_entities_id)
+SELECT s.id, te.id
+FROM seasons s
+JOIN tourist_entities te ON te.category_id = 1
+WHERE s.id IN (1, 2, 3);

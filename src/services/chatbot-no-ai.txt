@@ -1,0 +1,54 @@
+import pool from '../config/db.js';
+import axios from 'axios';
+
+// ฟังก์ชันประมวลผลคำถาม
+const processChatbotQuestion = async (question) => {
+  let dbResponse = '';
+
+  // เริ่มต้นด้วยการประมวลผลฐานข้อมูลก่อน
+  try {
+    if (["สถานที่ท่องเที่ยว", "ที่พัก", "ร้านอาหาร", "ร้านค้าของฝาก"].some(q => question.includes(q))) {
+      let category = '';
+      if (question.includes("สถานที่ท่องเที่ยว")) category = 'สถานที่ท่องเที่ยว';
+      else if (question.includes("ที่พัก")) category = 'ที่พัก';
+      else if (question.includes("ร้านอาหาร")) category = 'ร้านอาหาร';
+      else if (question.includes("ร้านค้าของฝาก")) category = 'ร้านค้าของฝาก';
+
+      // Query ดึงข้อมูลจากฐานข้อมูล
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description FROM tourist_entities te
+         JOIN categories c ON te.category_id = c.id
+         WHERE c.name = ?`, [category]);
+
+      if (rows.length > 0) {
+        dbResponse = `ข้อมูลที่พบสำหรับ "${category}": ${rows.map(row => row.name).join(", ")}`;
+      } else {
+        dbResponse = `ไม่พบข้อมูลที่เกี่ยวข้องสำหรับ "${category}" ในฐานข้อมูล`;
+      }
+
+    } else {
+      dbResponse = "ไม่พบคำถามที่ตรงกับข้อมูลในฐานข้อมูล";
+    }
+  } catch (error) {
+    dbResponse = "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล";
+  }
+
+  // ดึงข้อมูลจาก Google Places API เป็นขั้นตอนต่อมา
+  try {
+    const externalDataResponse = await axios.get(`https://maps.googleapis.com/maps/api/place/textsearch/json`, {
+      params: {
+        query: question,
+        key: process.env.GOOGLE_API_KEY,
+      }
+    });
+
+    const externalData = externalDataResponse.data.results.map(place => place.name).join(", ");
+    const externalResponse = `ข้อมูลจากแหล่งภายนอก: ${externalData}`;
+    
+    return `${dbResponse}\n${externalResponse}`;
+  } catch (error) {
+    return `${dbResponse}\nไม่สามารถดึงข้อมูลจากแหล่งภายนอกได้`;
+  }
+};
+
+export default processChatbotQuestion;
