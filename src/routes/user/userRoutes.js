@@ -6,11 +6,13 @@ import DistrictEntityController from '../../controllers/user/DistrictEntityContr
 import CategoryEntityController from '../../controllers/user/CategoryEntityController.js';
 const router = express.Router();
 
-// Unified search route for all criteria
-router.get('/search', SearchPlaces.getTouristEntities);
+router.get('/filters', SearchPlaces.getAllFilters); // Route to fetch all filters (seasons, districts, categories)
 
-// Route to fetch all filters (seasons, districts, categories)
-router.get('/filters', SearchPlaces.getAllFilters);
+router.get('/search', SearchPlaces.getTouristEntities); // Unified search route for all criteria
+
+router.get('/search-accommodations', SearchPlaces.searchAccommodations); // ค้นหาที่พัก
+router.get('/search-shops', SearchPlaces.searchGiftShops); // ค้นหาร้านค้าของฝาก
+router.get('/search-restaurants', SearchPlaces.searchRestaurants); // ค้นหาร้านอาหาร
 
 router.get('/places', TouristEntityController.getAllTouristEntities); // ดึงสถานที่ทุกประเภท
 router.get('/tourist-attractions', TouristEntityController.getAllTouristAttractions); //สถานที่ท่องเที่ยว
