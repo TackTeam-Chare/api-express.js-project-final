@@ -77,6 +77,16 @@ const getProfileHandler = async (req, res) => {
     }
 };
 
+const getAdminById = async (adminId) => {
+    try {
+        const [rows] = await pool.query('SELECT id, username, name FROM admin WHERE id = ?', [adminId]);
+        return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+        console.error('Error fetching admin by ID:', error);
+        throw new Error('Database query failed');
+    }
+};
+
 const updateProfileHandler = async (req, res) => {
     const { username, name, password } = req.body;
     const adminId = req.user.id;
