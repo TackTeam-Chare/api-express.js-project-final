@@ -153,25 +153,31 @@ const deleteOperatingHours = async (req, res) => {
 
 const getOperatingHoursById = async (req, res) => {
     try {
-        const id = req.params.id;
-        const query = 'SELECT * FROM operating_hours WHERE id = ?';
-        const [rows] = await pool.query(query, [id]);
-        const operatingHours = rows[0];
-
-        if (operatingHours) {
-            res.json(operatingHours);
-        } else {
-            res.status(404).json({
-                error: 'Operating hours not found for the tourist entity'
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching operating hours:', error);
-        res.status(500).json({
-            error: 'Internal server error'
+      const id = req.params.id;
+      const query = `
+        SELECT oh.*, te.name AS place_name 
+        FROM operating_hours oh
+        JOIN tourist_entities te ON te.id = oh.place_id
+        WHERE oh.id = ?;
+      `;
+      const [rows] = await pool.query(query, [id]);
+      const operatingHours = rows[0];
+  
+      if (operatingHours) {
+        res.json(operatingHours);
+      } else {
+        res.status(404).json({
+          error: 'Operating hours not found for the tourist entity',
         });
+      }
+    } catch (error) {
+      console.error('Error fetching operating hours:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+      });
     }
-};
+  };
+  
 
 const getTouristEntitiesByTime = async (req, res) => {
     try {

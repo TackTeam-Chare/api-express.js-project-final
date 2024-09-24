@@ -92,3 +92,266 @@ const processChatbotQuestion = async (question, socket) => {
 };
 
 export default processChatbotQuestion;
+
+
+//
+
+import pool from '../config/db.js';
+import axios from 'axios';
+
+const processChatbotQuestion = async (questionData, socket) => {
+  let dbResponse = '';
+  let hasRelevantData = false;
+  
+  const question = questionData.text; // Extract the text part of the question
+  const userLocation = questionData.location || null; // Extract the location if provided
+
+  try {
+    // 1. Handle queries for nearby places currently open
+    if (question.includes("สถานที่ที่เปิดตอนนี้")) {
+      const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      const currentDay = new Date().toLocaleString('en-GB', { weekday: 'long' });
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id
+         FROM tourist_entities te
+         JOIN operating_hours oh ON te.id = oh.place_id
+         WHERE oh.opening_time <= ? 
+           AND oh.closing_time >= ? 
+           AND oh.day_of_week = ?
+         ORDER BY te.name ASC`, 
+         [currentTime, currentTime, currentDay]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่ที่เปิดตอนนี้:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ที่เปิดตอนนี้');
+      }
+    }
+
+    // 2. Handle queries for nearby places based on location
+    if (question.includes("สถานที่ใกล้เคียงตอนนี้") && userLocation) {
+      const { latitude, longitude } = userLocation;
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id,
+         (6371 * acos(cos(radians(?)) * cos(radians(te.latitude)) 
+         * cos(radians(te.longitude) - radians(?)) + sin(radians(?)) * sin(radians(te.latitude)))) AS distance
+         FROM tourist_entities te
+         HAVING distance < 10
+         ORDER BY distance LIMIT 10`, 
+         [latitude, longitude, latitude]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่ใกล้พิกัดของคุณภายใน 10 กิโลเมตร:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ใกล้เคียงในระยะ 10 กิโลเมตร');
+      }
+    } else if (question.includes("สถานที่ใกล้เคียงตอนนี้") && !userLocation) {
+      socket.emit('botMessage', 'ไม่พบพิกัดของคุณ');
+    }
+
+    // 3. Handle queries for seasonal places
+    if (question.includes("สถานที่ตามฤดูกาล")) {
+      const currentMonth = new Date().getMonth() + 1; // Get the current month (1-12)
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id
+         FROM tourist_entities te
+         JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+         JOIN seasons s ON sr.season_id = s.id
+         WHERE MONTH(s.date_start) <= ? AND MONTH(s.date_end) >= ?
+         ORDER BY te.name ASC`, 
+         [currentMonth, currentMonth]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่แนะนำตามฤดูกาลในเดือนนี้:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ตามฤดูกาลในเดือนนี้');
+      }
+    }
+
+    // 4. Fallback to Google Places API and GPT-4 if no relevant data is found
+    if (!hasRelevantData) {
+      const externalPlaces = await axios.get(`https://maps.googleapis.com/maps/api/place/textsearch/json`, {
+        params: { query: question, key: process.env.GOOGLE_PLACES_API_KEY }
+      });
+
+      if (externalPlaces.data.results.length > 0) {
+        let externalResponse = 'ข้อมูลจาก Google Places:\n';
+        externalPlaces.data.results.forEach(place => {
+          externalResponse += `${place.name}\n ลิ้งค์ไปยัง Google Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}\n\n`;
+        });
+        socket.emit('botMessage', externalResponse);
+        hasRelevantData = true;
+      }
+
+      if (!hasRelevantData) {
+        const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: question }],
+        }, {
+          headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }
+        });
+
+        const aiMessage = gptResponse.data.choices[0].message.content;
+        socket.emit('botMessage', aiMessage);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error processing chatbot question:', error);
+    socket.emit('botMessage', 'เกิดข้อผิดพลาดในการประมวลผลคำถาม');
+  }
+};
+
+export default processChatbotQuestion;
+
+
+//
+import pool from '../config/db.js';
+import axios from 'axios';
+
+const processChatbotQuestion = async (questionData, socket) => {
+  let dbResponse = '';
+  let hasRelevantData = false;
+
+  const question = questionData.text; // Extract the text part of the question
+  const userLocation = questionData.location || null; // Extract the location if provided
+
+  try {
+    // 1. Handle queries for nearby places currently open
+    if (question.includes("สถานที่ที่เปิดตอนนี้")) {
+      const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      const currentDay = new Date().toLocaleString('en-GB', { weekday: 'long' });
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id
+         FROM tourist_entities te
+         JOIN operating_hours oh ON te.id = oh.place_id
+         WHERE oh.opening_time <= ? 
+           AND oh.closing_time >= ? 
+           AND oh.day_of_week = ?
+         ORDER BY te.name ASC`, 
+         [currentTime, currentTime, currentDay]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่ที่เปิดตอนนี้:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ที่เปิดตอนนี้');
+      }
+    }
+
+    // 2. Handle queries for nearby places based on location
+    if (question.includes("สถานที่ใกล้เคียงตอนนี้") && userLocation) {
+      const { latitude, longitude } = userLocation;
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id,
+         (6371 * acos(cos(radians(?)) * cos(radians(te.latitude)) 
+         * cos(radians(te.longitude) - radians(?)) + sin(radians(?)) * sin(radians(te.latitude)))) AS distance
+         FROM tourist_entities te
+         HAVING distance < 10
+         ORDER BY distance LIMIT 10`, 
+         [latitude, longitude, latitude]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่ใกล้พิกัดของคุณภายใน 10 กิโลเมตร:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ใกล้เคียงในระยะ 10 กิโลเมตร');
+      }
+    } else if (question.includes("สถานที่ใกล้เคียงตอนนี้") && !userLocation) {
+      socket.emit('botMessage', 'ไม่พบพิกัดของคุณ');
+    }
+
+    // 3. Handle queries for seasonal places
+    if (question.includes("สถานที่ตามฤดูกาล")) {
+      const currentMonth = new Date().getMonth() + 1; // Get the current month (1-12)
+
+      const [rows] = await pool.query(
+        `SELECT te.name, te.description, te.id
+         FROM tourist_entities te
+         JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+         JOIN seasons s ON sr.season_id = s.id
+         WHERE MONTH(s.date_start) <= ? AND MONTH(s.date_end) >= ?
+         ORDER BY te.name ASC`, 
+         [currentMonth, currentMonth]
+      );
+
+      if (rows.length > 0) {
+        dbResponse = `สถานที่แนะนำตามฤดูกาลในเดือนนี้:\n`;
+        rows.forEach(row => {
+          dbResponse += `${row.name} - ${row.description}\n ลิ้งค์ไปยังที่ตั้ง: http://localhost:3000/place/${row.id}\n\n`;
+        });
+        socket.emit('botMessage', dbResponse);
+        hasRelevantData = true;
+      } else {
+        socket.emit('botMessage', 'ไม่พบสถานที่ตามฤดูกาลในเดือนนี้');
+      }
+    }
+
+    // 4. Fallback to Google Places API and GPT-4 if no relevant data is found
+    if (!hasRelevantData) {
+      const externalPlaces = await axios.get(`https://maps.googleapis.com/maps/api/place/textsearch/json`, {
+        params: { query: question, key: process.env.GOOGLE_PLACES_API_KEY }
+      });
+
+      if (externalPlaces.data.results.length > 0) {
+        let externalResponse = 'ข้อมูลจาก Google Places:\n';
+        externalPlaces.data.results.forEach(place => {
+          externalResponse += `${place.name}\n ลิ้งค์ไปยัง Google Maps: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}\n\n`;
+        });
+        socket.emit('botMessage', externalResponse);
+        hasRelevantData = true;
+      }
+
+      if (!hasRelevantData) {
+        const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: question }],
+        }, {
+          headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }
+        });
+
+        const aiMessage = gptResponse.data.choices[0].message.content;
+        socket.emit('botMessage', aiMessage);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error processing chatbot question:', error);
+    socket.emit('botMessage', 'เกิดข้อผิดพลาดในการประมวลผลคำถาม');
+  }
+};
+
+export default processChatbotQuestion;
