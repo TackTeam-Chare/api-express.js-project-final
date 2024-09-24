@@ -55,18 +55,6 @@ io.on('connection', (socket) => {
   });
 });
 
-app.post('/api/chatbot', async (req, res) => {
-  const userMessage = req.body.message;
-
-  try {
-    const botResponse = await processChatbotQuestion(userMessage);
-    res.json({ message: botResponse });
-  } catch (error) {
-    console.error('Error processing chatbot request:', error);
-    res.status(500).json({ error: 'Failed to process chatbot request' });
-  }
-});
-
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 

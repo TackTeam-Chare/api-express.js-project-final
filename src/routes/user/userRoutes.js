@@ -4,15 +4,14 @@ import SearchPlaces from '../../controllers/user/SearchPlaces.js';
 import SeasonEntityController from '../../controllers/user/SeasonEntityController.js';
 import DistrictEntityController from '../../controllers/user/DistrictEntityController.js';
 import CategoryEntityController from '../../controllers/user/CategoryEntityController.js';
+import ChatbotSuggestionsController from '../../controllers/user/ChatbotSuggestionsController.js'; 
 const router = express.Router();
+
+router.get('/suggestions', ChatbotSuggestionsController.getSuggestions);
 
 router.get('/filters', SearchPlaces.getAllFilters); // Route to fetch all filters (seasons, districts, categories)
 
 router.get('/search', SearchPlaces.getTouristEntities); // Unified search route for all criteria
-
-router.get('/search-accommodations', SearchPlaces.searchAccommodations); // ค้นหาที่พัก
-router.get('/search-shops', SearchPlaces.searchGiftShops); // ค้นหาร้านค้าของฝาก
-router.get('/search-restaurants', SearchPlaces.searchRestaurants); // ค้นหาร้านอาหาร
 
 router.get('/places', TouristEntityController.getAllTouristEntities); // ดึงสถานที่ทุกประเภท
 router.get('/tourist-attractions', TouristEntityController.getAllTouristAttractions); //สถานที่ท่องเที่ยว

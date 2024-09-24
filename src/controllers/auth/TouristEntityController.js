@@ -323,7 +323,6 @@ const createTouristEntity = async (req, res) => {
     }
 };
 
-
 const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
     const { name, description, location, latitude, longitude, district_id, category_id, created_by, published } = touristEntity;
 
@@ -338,7 +337,6 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
             'INSERT INTO tourist_entities (name, description, location, latitude, longitude, district_id, category_id, created_by, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [name, description, location, latitude, longitude, district_id, category_id, created_by, isPublished] 
         );
-        
 
         const tourismEntitiesId = result.insertId;
 
@@ -381,6 +379,7 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
         conn.release();
     }
 };
+
 
 const updateTouristEntity = async (req, res) => {
     const id = req.params.id;
