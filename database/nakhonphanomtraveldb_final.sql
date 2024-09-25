@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 12, 2024 at 04:04 PM
+-- Generation Time: Sep 24, 2024 at 01:58 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -78,6 +78,32 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `chatbot_suggestions`
+--
+
+CREATE TABLE `chatbot_suggestions` (
+  `id` int(11) NOT NULL,
+  `category` varchar(255) NOT NULL,
+  `suggestion_text` varchar(255) NOT NULL,
+  `active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chatbot_suggestions`
+--
+
+INSERT INTO `chatbot_suggestions` (`id`, `category`, `suggestion_text`, `active`, `created_at`, `updated_at`) VALUES
+(1, 'สถานที่ท่องเที่ยว', 'สถานที่ท่องเที่ยวใกล้เคียงฉันในตอนนี้', 1, '2024-09-24 11:57:14', '2024-09-24 11:58:40'),
+(2, 'ที่พัก', 'แนะนำที่พักที่ดีที่สุดในนครพนม', 1, '2024-09-24 11:57:14', '2024-09-24 11:57:21'),
+(3, 'ร้านอาหาร', 'แนะนำร้านอาหารที่น่าสนใจ', 1, '2024-09-24 11:57:14', '2024-09-24 11:57:14'),
+(4, 'ร้านค้าของฝาก', 'แนะนำร้านขายของฝากที่ดีที่สุด', 1, '2024-09-24 11:57:14', '2024-09-24 11:57:14'),
+(5, 'สถานที่ท่องเที่ยว', 'สถานที่ท่องเที่ยวยอดนิยมในจังหวัดนครพนมมีที่ไหนบ้าง', 1, '2024-09-24 11:57:14', '2024-09-24 11:58:08');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `district`
 --
 
@@ -91,18 +117,18 @@ CREATE TABLE `district` (
 --
 
 INSERT INTO `district` (`id`, `name`) VALUES
-(1, 'อำเภอเมืองนครพนม'),
-(2, 'อำเภอบ้านแพง'),
-(3, 'อำเภอท่าอุเทน'),
-(4, 'อำเภอศรีสงคราม'),
-(5, 'อำเภอนาหว้า'),
-(6, 'อำเภอโพนสวรรค์'),
-(7, 'อำเภอนาทม '),
-(8, 'อำเภอธาตุพนม'),
-(9, 'อำเภอเรณูนคร'),
-(10, 'อำเภอนาแก'),
-(11, 'อำเภอปลาปาก'),
-(12, 'อำเภอวังยาง');
+(1, 'เมืองนครพนม'),
+(2, 'บ้านแพง'),
+(3, 'ท่าอุเทน'),
+(4, 'ศรีสงคราม'),
+(5, 'นาหว้า'),
+(6, 'โพนสวรรค์'),
+(7, 'นาทม '),
+(8, 'ธาตุพนม'),
+(9, 'เรณูนคร'),
+(10, 'นาแก'),
+(11, 'ปลาปาก'),
+(12, 'วังยาง');
 
 -- --------------------------------------------------------
 
@@ -210,6 +236,12 @@ ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `chatbot_suggestions`
+--
+ALTER TABLE `chatbot_suggestions`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `district`
 --
 ALTER TABLE `district`
@@ -273,6 +305,12 @@ ALTER TABLE `admin_tokens`
 --
 ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `chatbot_suggestions`
+--
+ALTER TABLE `chatbot_suggestions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `district`
