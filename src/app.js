@@ -1,4 +1,4 @@
-import express from 'express';
+import express from 'express'; 
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -56,11 +56,12 @@ const io = new Server(server, {
       'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app',  // อนุญาตโดเมนของ Vercel
       'http://localhost:3000'  // อนุญาต localhost สำหรับการพัฒนา
     ],
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
   },
 });
 
-// error handler 
+// WebSocket error handler 
 io.on('error', (error) => {
   console.error('WebSocket error:', error);
 });
