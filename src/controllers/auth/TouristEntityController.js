@@ -276,12 +276,14 @@ const createTouristEntity = async (req, res) => {
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
     const { district_name, category_name, season_id, operating_hours} = touristEntity;
 
+    // Log ข้อมูลที่ได้รับจาก request
     console.log('Received Data:', touristEntity);
     console.log('Image Paths:', imagePaths);
     console.log('Operating Hours:', operating_hours);
 
     // Validation: Check for required fields
     if (!touristEntity.name || !touristEntity.description || !touristEntity.location) {
+        console.log('Missing required fields');
         return res.status(400).json({
             error: 'Name, description, and location are required.'
         });
@@ -291,11 +293,13 @@ const createTouristEntity = async (req, res) => {
     try {
         const [existingEntity] = await pool.query('SELECT id FROM tourist_entities WHERE name = ?', [touristEntity.name]);
         if (existingEntity.length > 0) {
+            console.log('Duplicate name found:', touristEntity.name);
             return res.status(409).json({
                 error: 'A tourist entity with this name already exists. Please choose a different name.'
             });
         }
     } catch (error) {
+        console.error('Error checking for duplicate name:', error);
         return res.status(500).json({
             error: 'Error checking for duplicate name.'
         });
@@ -309,7 +313,11 @@ const createTouristEntity = async (req, res) => {
         touristEntity.category_id = categoryId;
         touristEntity.created_by = req.user.id;
 
+        console.log('Creating tourist entity:', touristEntity);
+        
         const insertId = await create(touristEntity, imagePaths, season_id, operating_hours);
+
+        console.log('Tourist entity created with ID:', insertId);
 
         res.json({
             message: 'Tourist entity created successfully',
@@ -380,12 +388,16 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
     }
 };
 
-
 const updateTouristEntity = async (req, res) => {
     const id = req.params.id;
     const touristEntity = req.body;
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
     const { district_name, category_name, season_id, operating_hours } = touristEntity;
+
+    console.log('Updating tourist entity with ID:', id);
+    console.log('Received Data for Update:', touristEntity);
+    console.log('Image Paths for Update:', imagePaths);
+    console.log('Operating Hours for Update:', operating_hours);
 
     try {
         const districtId = await District.getIdByName(district_name);
@@ -394,23 +406,25 @@ const updateTouristEntity = async (req, res) => {
         touristEntity.district_id = districtId;
         touristEntity.category_id = categoryId;
 
-        const affectedRows = await update(id, touristEntity, imagePaths, season_id, operating_hours); // ตัด rating ออก
+        const affectedRows = await update(id, touristEntity, imagePaths, season_id, operating_hours);
         if (affectedRows > 0) {
+            console.log(`Tourist entity with ID ${id} updated successfully`);
             res.json({
                 message: `Tourist entity with ID ${id} updated successfully`
             });
         } else {
+            console.log(`Tourist entity with ID ${id} not found`);
             res.status(404).json({
                 error: 'Tourist entity not found'
             });
         }
     } catch (error) {
+        console.error('Error in updateTouristEntity:', error);
         res.status(500).json({
             error: error.message
         });
     }
 };
-
 
 const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => { 
     const { name, description, location, latitude, longitude, district_id, category_id, published } = touristEntity;

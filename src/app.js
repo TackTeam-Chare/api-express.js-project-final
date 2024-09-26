@@ -1,4 +1,4 @@
-import express from 'express'; 
+import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -17,6 +17,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// บันทึกการเริ่มต้น
+console.log('Initializing server...');
+
+// Error handling middleware (สำหรับจับข้อผิดพลาดทุกส่วนใน Express)
+app.use((err, req, res, next) => {
+    console.error('Error caught in middleware:', err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+});
+
 // CORS Configuration for HTTP requests
 app.use(cors({
   origin: [
@@ -27,6 +36,8 @@ app.use(cors({
   credentials: true,  // อนุญาตการส่ง cookies และ credential
 }));
 
+console.log('CORS configuration applied for: https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app and localhost:3000');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -34,6 +45,9 @@ const server = http.createServer(app);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+console.log('__filename:', __filename);
+console.log('__dirname:', __dirname);
 
 // CORS Configuration for WebSocket (Socket.IO)
 const io = new Server(server, {
@@ -46,10 +60,17 @@ const io = new Server(server, {
   },
 });
 
+// error handler 
+io.on('error', (error) => {
+  console.error('WebSocket error:', error);
+});
+
+// console log สำหรับการเชื่อมต่อ WebSocket
 io.on('connection', (socket) => {
-  console.log('User connected');
+  console.log('User connected:', socket.id);
 
   socket.on('userMessage', async (message) => {
+    console.log('Received message from user:', message);
     try {
       await processChatbotQuestion(message, socket);
     } catch (error) {
@@ -59,12 +80,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('User disconnected:', socket.id);
   });
 });
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
+// เพิ่ม console log สำหรับ static file path
+console.log('Serving static files from /uploads');
 
 // User Routes
 app.use('/', userRoutes);
@@ -75,7 +99,23 @@ app.use('/auth', authRoutes);
 // Admin Routes (with JWT authentication)
 app.use('/admin', authenticateJWT, adminRoutes);
 
-// Start the server
+// Catch all route errors
+app.use((err, req, res, next) => {
+  console.error('Route Error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// console log เมื่อเซิร์ฟเวอร์เริ่มทำงาน
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Catch uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
 });
