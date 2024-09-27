@@ -429,7 +429,9 @@ const updateTouristEntity = async (req, res) => {
 const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => { 
     const { name, description, location, latitude, longitude, district_id, category_id, published } = touristEntity;
 
-    const isPublished = published === 'true' ? 1 : 0;
+    // const isPublished = published === 'true' ? 1 : 0;
+    const isPublished = published === 'true' || published === 1 || published === '1' ? 1 : 0;
+
 
     const conn = await pool.getConnection();
     try {
@@ -484,7 +486,26 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
     }
 };
 
-
+const checkDuplicateName = async (req, res) => {
+    const { name } = req.query;
+  
+    try {
+      // ตรวจสอบว่ามีชื่อนี้อยู่ในฐานข้อมูลไหม
+      const [result] = await pool.query(
+        'SELECT id FROM tourist_entities WHERE name = ?',
+        [name]
+      );
+  
+      if (result.length > 0) {
+        return res.json({ isDuplicate: true });
+      } else {
+        return res.json({ isDuplicate: false });
+      }
+    } catch (error) {
+      console.error('Error checking duplicate name:', error);
+      return res.status(500).json({ error: 'Error checking duplicate name.' });
+    }
+  };
 
 export default {
     searchTouristEntities,
@@ -495,4 +516,5 @@ export default {
     createTouristEntity,
     updateTouristEntity,
     deleteTouristEntity,
+    checkDuplicateName
 };

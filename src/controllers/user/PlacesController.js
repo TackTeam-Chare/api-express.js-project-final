@@ -1,5 +1,5 @@
 import pool from '../../config/db.js';
-// Helper function to map image paths to URLs
+
 const mapImages = (rows) => {
     rows.forEach(row => {
         if (row.image_path && typeof row.image_path === 'string') {
@@ -10,10 +10,10 @@ const mapImages = (rows) => {
             }));
         } else {
             console.log(`No valid image_path found for ${row.name}`);
-            row.images = []; // กำหนดค่าเป็น array ว่างเพื่อหลีกเลี่ยงข้อผิดพลาด
+            row.images = [];
         }
     });
-    return rows; // เพิ่มการ return เพื่อแน่ใจว่า images ที่ถูก map ถูกส่งกลับ
+    return rows;
 };
 
 // Function to get all tourist entities
@@ -28,8 +28,17 @@ const getAllTouristEntities = async (req, res) => {
         WHERE te.published = 1
         GROUP BY te.id;
       `;
-        const [entities] = await pool.query(query);
-        res.json(mapImages(entities));
+        const [rows] = await pool.query(query);
+           // Perform image mapping directly inside the function
+           rows.forEach(row => {
+            if (row.images) {
+                row.images = row.images.split(',').map(imagePath => ({
+                    image_path: imagePath,
+                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+                }));
+            }
+        });
+        res.json(rows);
     } catch (error) {
         console.error('Error fetching tourist entities:', error);
         res.status(500).json({
@@ -126,7 +135,6 @@ const getAllSouvenirShops = async (req, res) => {
     }
 };
 
-
 // Function to fetch nearby tourist entities with image handling
 const getNearbyTouristEntitiesHandler = async (req, res) => {
     try {
@@ -197,7 +205,6 @@ const getTouristEntityDetailsById = async (id) => {
     return entityRows[0];
 };
 
-
 const getNearbyTouristEntities = async (latitude, longitude, distance, excludeId) => {
     
     const query = `
@@ -235,8 +242,6 @@ GROUP_CONCAT(DISTINCT oh.closing_time ORDER BY oh.day_of_week) AS closing_times
     })));
     return rows;
 };
-
-
 
 const getCurrentlyOpenTouristEntities = async (req, res) => {
     try {
@@ -299,301 +304,6 @@ const getCurrentlyOpenTouristEntities = async (req, res) => {
     }
 };
 
-
-const getTopRatedTouristEntities = async (req, res) => {
-    try {
-        const query = `
-           SELECT 
-                te.id,
-                te.name,
-                te.description,
-                te.location,
-                te.latitude,
-                te.longitude,
-                d.name AS district_name,
-                c.name AS category_name,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name, -- Include season name
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_urls,
-                COALESCE(te.rating, 0) AS average_rating
-            FROM 
-                tourist_entities te
-            JOIN 
-                categories c ON te.category_id = c.id
-            JOIN 
-                district d ON te.district_id = d.id
-            LEFT JOIN 
-                tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN 
-                seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN 
-                seasons s ON sr.season_id = s.id
-            WHERE 
-                te.published = 1
-                AND te.rating IS NOT NULL
-            GROUP BY 
-                te.id
-            ORDER BY 
-                average_rating DESC
-            LIMIT 20;
-        `;
-
-        const [rows] = await pool.query(query);
-
-        // Map images to a usable format
-        rows.forEach(row => {
-            if (row.image_urls) {
-                row.images = row.image_urls.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching top-rated tourist entities:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-const getTopRatedTouristAttractions = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                te.id,
-                te.name,
-                te.description,
-                te.location,
-                te.latitude,
-                te.longitude,
-                d.name AS district_name,
-                c.name AS category_name,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name, -- Include season name
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_urls,
-                COALESCE(te.rating, 0) AS average_rating
-            FROM 
-                tourist_entities te
-            JOIN 
-                categories c ON te.category_id = c.id
-            JOIN 
-                district d ON te.district_id = d.id
-            LEFT JOIN 
-                tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN 
-                seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN 
-                seasons s ON sr.season_id = s.id
-            WHERE 
-                te.published = 1
-                AND c.name = 'สถานที่ท่องเที่ยว'
-                AND te.rating IS NOT NULL
-            GROUP BY 
-                te.id
-            ORDER BY 
-                average_rating DESC
-            LIMIT 20;
-        `;
-
-        const [rows] = await pool.query(query);
-
-        // Map images to a usable format
-        rows.forEach(row => {
-            if (row.image_urls) {
-                row.images = row.image_urls.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching top-rated tourist attractions:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-const getTopRatedAccommodations = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                te.id,
-                te.name,
-                te.description,
-                te.location,
-                te.latitude,
-                te.longitude,
-                d.name AS district_name,
-                c.name AS category_name,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name, -- Include season name
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_urls,
-                COALESCE(te.rating, 0) AS average_rating
-            FROM 
-                tourist_entities te
-            JOIN 
-                categories c ON te.category_id = c.id
-            JOIN 
-                district d ON te.district_id = d.id
-            LEFT JOIN 
-                tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN 
-                seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN 
-                seasons s ON sr.season_id = s.id
-            WHERE 
-                te.published = 1
-                AND c.name = 'ที่พัก'
-                AND te.rating IS NOT NULL
-            GROUP BY 
-                te.id
-            ORDER BY 
-                average_rating DESC
-            LIMIT 20;
-        `;
-
-        const [rows] = await pool.query(query);
-
-        // Map images to a usable format
-        rows.forEach(row => {
-            if (row.image_urls) {
-                row.images = row.image_urls.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching top-rated accommodations:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-const getTopRatedRestaurants = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                te.id,
-                te.name,
-                te.description,
-                te.location,
-                te.latitude,
-                te.longitude,
-                d.name AS district_name,
-                c.name AS category_name,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name, -- Include season name
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_urls,
-                COALESCE(te.rating, 0) AS average_rating
-            FROM 
-                tourist_entities te
-            JOIN 
-                categories c ON te.category_id = c.id
-            JOIN 
-                district d ON te.district_id = d.id
-            LEFT JOIN 
-                tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN 
-                seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN 
-                seasons s ON sr.season_id = s.id
-            WHERE 
-                te.published = 1
-                AND c.name = 'ร้านอาหาร'
-                AND te.rating IS NOT NULL
-            GROUP BY 
-                te.id
-            ORDER BY 
-                average_rating DESC
-            LIMIT 20;
-        `;
-
-        const [rows] = await pool.query(query);
-
-        // Map images to a usable format
-        rows.forEach(row => {
-            if (row.image_urls) {
-                row.images = row.image_urls.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching top-rated restaurants:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-const getTopRatedSouvenirShops = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                te.id,
-                te.name,
-                te.description,
-                te.location,
-                te.latitude,
-                te.longitude,
-                d.name AS district_name,
-                c.name AS category_name,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name,
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_urls,
-                COALESCE(te.rating, 0) AS average_rating
-            FROM 
-                tourist_entities te
-            JOIN 
-                categories c ON te.category_id = c.id
-            JOIN 
-                district d ON te.district_id = d.id
-            LEFT JOIN 
-                tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN 
-                seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN 
-                seasons s ON sr.season_id = s.id
-            WHERE 
-                te.published = 1
-                AND c.name = 'ร้านค้าของฝาก'
-                AND te.rating IS NOT NULL
-            GROUP BY 
-                te.id
-            ORDER BY 
-                average_rating DESC
-            LIMIT 20;
-        `;
-
-        const [rows] = await pool.query(query);
-
-        // Map images to a usable format
-        rows.forEach(row => {
-            if (row.image_urls) {
-                row.images = row.image_urls.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching top-rated souvenir shops:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
 // Function to fetch tourist entities by time with image handling
 const getTouristEntitiesByTime = async (req, res) => {
     try {
@@ -648,8 +358,9 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
     try {
         const currentDate = new Date();
         const month = currentDate.getMonth() + 1;
+        const userLat = req.query.lat;  // Get user's latitude from query parameters
+        const userLng = req.query.lng;  // Get user's longitude from query parameters
 
-        // Determine season based on the current month
         let seasonId;
         if (month >= 3 && month <= 5) {
             seasonId = await getIdByName('ฤดูร้อน');
@@ -661,13 +372,13 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
             seasonId = await getIdByName('ตลอดทั้งปี');
         }
 
-        // SQL query to fetch tourist entities only (category_id = 1)
         const query = `
             SELECT
                 te.*, 
                 MAX(s.name) AS season_name,
                 MAX(d.name) AS district_name,
-                GROUP_CONCAT(DISTINCT tei.image_path) AS images
+                GROUP_CONCAT(DISTINCT tei.image_path) AS images,
+                (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
             FROM
                 tourist_entities te
                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
@@ -679,11 +390,11 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
                 AND (sr.season_id = ? OR sr.season_id = (SELECT id FROM seasons WHERE name = 'ตลอดทั้งปี'))
             GROUP BY
                 te.id
+            ORDER BY distance ASC  -- Order by nearest distance
         `;
 
-        const [rows] = await pool.query(query, [seasonId]);
+        const [rows] = await pool.query(query, [userLat, userLng, userLat, seasonId]);
 
-        // Perform image mapping directly inside the function
         rows.forEach(row => {
             if (row.images) {
                 row.images = row.images.split(',').map(imagePath => ({
@@ -693,7 +404,6 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
             }
         });
 
-        // Send the response with the modified rows
         res.json(rows);
 
     } catch (error) {
@@ -703,7 +413,6 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
         });
     }
 };
-
 
 
 const getIdByName = async (name) => {
@@ -718,12 +427,23 @@ const getIdByName = async (name) => {
 const getTouristEntitiesBySeason = async (req, res) => {
     try {
         const id = req.params.id;
+        const userLat = req.query.lat;  // Get user's latitude from query parameters
+        const userLng = req.query.lng;  // Get user's longitude from query parameters
+        
         const query = `
             SELECT
                 te.*,
-                s.name AS season_name,
-                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
-                d.name AS district_name
+                s.name AS season_name, 
+                ti.image_path AS images,
+                d.name AS district_name,
+                GROUP_CONCAT(
+                    DISTINCT CONCAT(
+                        oh.day_of_week, ': ',
+                        TIME_FORMAT(oh.opening_time, '%h:%i %p'), ' - ',
+                        TIME_FORMAT(oh.closing_time, '%h:%i %p')
+                    ) ORDER BY oh.day_of_week SEPARATOR '\n'
+                ) AS operating_hours,
+                (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
             FROM
                 tourist_entities te
                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
@@ -734,12 +454,14 @@ const getTouristEntitiesBySeason = async (req, res) => {
                 JOIN categories c ON te.category_id = c.id
             WHERE 
                 sr.season_id = ?
-                AND c.id = 1
-            GROUP BY
-                te.id, s.name, d.name
+                AND c.name = 'สถานที่ท่องเที่ยว'
+            GROUP BY 
+                te.id
+            ORDER BY distance ASC
         `;
-        const [rows] = await pool.query(query, [id]);
-         rows.forEach(row => {
+        const [rows] = await pool.query(query, [userLat, userLng, userLat, id]);
+        
+        rows.forEach(row => {
             if (row.images) {
                 row.images = row.images.split(',').map(imagePath => ({
                     image_path: imagePath,
@@ -747,14 +469,11 @@ const getTouristEntitiesBySeason = async (req, res) => {
                 }));
             }
         });
-        console.log('Executing query:', query);
-        console.log('With parameters:', [id]);
-
         res.json(rows);
     } catch (error) {
         console.error('Error fetching tourist entities by season:', error);
         res.status(500).json({
-            error: error.message
+            error: 'Internal server error'
         });
     }
 };
@@ -1130,21 +849,14 @@ export default {
     getAllSouvenirShops,
     getNearbyTouristEntitiesHandler,
     getCurrentlyOpenTouristEntities,
-    getTopRatedTouristEntities,
-    getTopRatedTouristAttractions,
-    getTopRatedAccommodations,
-    getTopRatedRestaurants,
-    getTopRatedSouvenirShops,
     getTouristEntitiesByTime,
     getTouristEntitiesBySeasonRealTime,
     getTouristEntitiesBySeason,
     getTouristEntitiesByCategory,
     getTouristEntitiesByDistrict,
     getTouristAttractionsByDistrict,
-    getTouristEntitiesByDistrict,
     getAccommodationsByDistrict,
     getRestaurantsByDistrict,
     getSouvenirShopsByDistrict,
     getNearbyPlacesByCoordinates
-
 };

@@ -14,6 +14,7 @@ const router = express.Router();
 router.get('/search', TouristEntityController.searchTouristEntities);
 
 // Tourist Entities
+router.get('/check-duplicate-name', TouristEntityController.checkDuplicateName);
 router.get('/place', TouristEntityController.getAllTouristEntities); // ดึงข้อมูลตารางสถานที่ทั้งหมด
 router.get('/place/:id', TouristEntityController.getTouristEntityById); // ดึงข้อมูลตารางสถานที่ด้วยไอดี
 router.get('/place/nearby/:id', TouristEntityController.getNearbyTouristEntitiesHandler); // ดึงข้อมูลตารางสถานที่ด้วยไอดีและสถานที่ใกล้เคียง
