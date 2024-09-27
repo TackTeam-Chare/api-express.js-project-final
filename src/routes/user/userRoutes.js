@@ -7,8 +7,9 @@ import CategoryEntityController from '../../controllers/user/CategoryEntityContr
 import ChatbotSuggestionsController from '../../controllers/user/ChatbotSuggestionsController.js'; 
 const router = express.Router();
 
-router.get('/suggestions', ChatbotSuggestionsController.getSuggestions);
 
+
+router.get('/suggestions', ChatbotSuggestionsController.getSuggestions);
 router.get('/filters', SearchPlaces.getAllFilters); // Route to fetch all filters (seasons, districts, categories)
 
 router.get('/search', SearchPlaces.getTouristEntities); // Unified search route for all criteria
