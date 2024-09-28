@@ -8,6 +8,7 @@ import userRoutes from './routes/user/userRoutes.js';
 import adminRoutes from './routes/auth/adminRoutes.js';
 import authRoutes from './routes/auth/authRoutes.js';
 import authenticateJWT from './middleware/authMiddleware.js';
+import logVisitor  from './middleware/logVisitor.js';
 import processChatbotQuestion from './services/chatbotService.js';
 import { Server } from 'socket.io';
 import http from 'http';
@@ -16,6 +17,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(logVisitor);
 
 // บันทึกการเริ่มต้น
 console.log('Initializing server...');

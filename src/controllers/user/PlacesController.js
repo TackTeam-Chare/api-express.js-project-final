@@ -768,15 +768,89 @@ const getSouvenirShopsByDistrict = async (req, res) => {
     }
 };
 
+// const getNearbyPlacesByCoordinates = async (req, res) => {
+//     try {
+//         const { lat, lng, radius = 5000 } = req.query;
+
+//         // ตรวจสอบว่าพิกัดที่ส่งมาถูกต้องหรือไม่ (ต้องไม่เป็น undefined หรือ null)
+//         if (!lat || !lng) {
+//             return res.status(400).json({ error: "Invalid coordinates" });
+//         }
+
+//         // ตรวจสอบว่า radius เป็นตัวเลขที่ถูกต้องหรือไม่
+//         let radiusValue = parseInt(radius, 10);
+//         if (isNaN(radiusValue) || radiusValue <= 0) {
+//             radiusValue = 5000; // Default to 5000 meters
+//         }
+
+//         console.log(`Fetching nearby places with coordinates lat: ${lat}, lng: ${lng}, radius: ${radiusValue} meters`);
+
+//         const query = `
+//             SELECT 
+//                 te.*, 
+//                 c.name AS category_name, 
+//                 d.name AS district_name,
+//                 GROUP_CONCAT(DISTINCT s.name ORDER BY s.id) AS season_name,
+//                 GROUP_CONCAT(DISTINCT ti.image_path ORDER BY ti.id) AS images,
+//                 (6371 * acos(cos(radians(?)) * cos(radians(te.latitude)) * cos(radians(te.longitude) - radians(?)) + sin(radians(?)) * sin(radians(te.latitude)))) AS distance
+//             FROM 
+//                 tourist_entities te
+//             JOIN 
+//                 categories c ON te.category_id = c.id
+//             JOIN 
+//                 district d ON te.district_id = d.id
+//             LEFT JOIN 
+//                 seasons_relation sr ON te.id = sr.tourism_entities_id
+//             LEFT JOIN 
+//                 seasons s ON sr.season_id = s.id
+//             LEFT JOIN 
+//                 tourism_entities_images ti ON te.id = ti.tourism_entities_id
+//             WHERE 
+//                 te.published = 1
+//             GROUP BY 
+//                 te.id
+//             HAVING 
+//                 distance < ?
+//             ORDER BY 
+//                 distance
+//             LIMIT 0, 20;
+//         `;
+
+//         // Execute the query with the provided lat, lng, and radius
+//         const [rows] = await pool.query(query, [lat, lng, lat, radiusValue]);
+
+//         console.log(`Fetched ${rows.length} places within the radius.`);
+
+//         // Process rows to format images and construct full URLs
+//         rows.forEach(row => {
+//             if (row.images) {
+//                 row.images = row.images.split(',').map(imagePath => ({
+//                     image_path: imagePath,
+//                     image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+//                 }));
+//             }
+//         });
+
+//         // Return the results as JSON
+//         res.json(rows);
+//     } catch (error) {
+//         console.error('Error fetching nearby places by coordinates:', error.message, error.stack);
+//         res.status(500).json({
+//             error: 'Internal server error',
+//             details: error.message
+//         });
+//     }
+// };
 const getNearbyPlacesByCoordinates = async (req, res) => {
     try {
-        const {
-            lat,
-            lng,
-            radius = 5000
-        } = req.query;
+        const { lat, lng, radius = 5000 } = req.query;
 
-        // Ensure radius is a valid number
+        // ตรวจสอบว่าพิกัดที่ส่งมาถูกต้องหรือไม่ (ต้องไม่เป็น undefined หรือ null)
+        if (!lat || !lng) {
+            return res.status(400).json({ error: "Invalid coordinates" });
+        }
+
+        // ตรวจสอบว่า radius เป็นตัวเลขที่ถูกต้องหรือไม่
         let radiusValue = parseInt(radius, 10);
         if (isNaN(radiusValue) || radiusValue <= 0) {
             radiusValue = 5000; // Default to 5000 meters
@@ -786,12 +860,25 @@ const getNearbyPlacesByCoordinates = async (req, res) => {
 
         const query = `
             SELECT 
-                te.*, 
+                te.id,
+                te.name,
+                te.description,
+                te.location,
+                te.latitude,
+                te.longitude,
+                te.district_id,
+                te.category_id,
+                te.created_date,
+                te.created_by,
+                te.published,
                 c.name AS category_name, 
                 d.name AS district_name,
                 GROUP_CONCAT(DISTINCT s.name ORDER BY s.id) AS season_name,
                 GROUP_CONCAT(DISTINCT ti.image_path ORDER BY ti.id) AS images,
-                (6371 * acos(cos(radians(?)) * cos(radians(te.latitude)) * cos(radians(te.longitude) - radians(?)) + sin(radians(?)) * sin(radians(te.latitude)))) AS distance
+                ST_Distance_Sphere(
+                    point(te.longitude, te.latitude),
+                    point(?, ?)
+                ) AS distance
             FROM 
                 tourist_entities te
             JOIN 
@@ -807,7 +894,19 @@ const getNearbyPlacesByCoordinates = async (req, res) => {
             WHERE 
                 te.published = 1
             GROUP BY 
-                te.id
+                te.id, 
+                te.name, 
+                te.description, 
+                te.location, 
+                te.latitude, 
+                te.longitude, 
+                te.district_id, 
+                te.category_id, 
+                te.created_date, 
+                te.created_by, 
+                te.published, 
+                c.name, 
+                d.name
             HAVING 
                 distance < ?
             ORDER BY 
@@ -815,9 +914,8 @@ const getNearbyPlacesByCoordinates = async (req, res) => {
             LIMIT 0, 20;
         `;
 
-        console.log(`Executing query: ${query}`);
-
-        const [rows] = await pool.query(query, [lat, lng, lat, lng, radiusValue]);
+        // Execute the query with the provided lat, lng, and radius
+        const [rows] = await pool.query(query, [lng, lat, radiusValue]);
 
         console.log(`Fetched ${rows.length} places within the radius.`);
 
@@ -831,15 +929,18 @@ const getNearbyPlacesByCoordinates = async (req, res) => {
             }
         });
 
+        // Return the results as JSON
         res.json(rows);
     } catch (error) {
-        console.error('Error fetching nearby places by coordinates:', error.message, error.stack); // Enhanced logging
+        console.error('Error fetching nearby places by coordinates:', error.message, error.stack);
         res.status(500).json({
             error: 'Internal server error',
             details: error.message
-        }); // Provide error details
+        });
     }
 };
+
+
 
 export default {
     getAllTouristEntities,
