@@ -1,4 +1,5 @@
 import express from 'express';
+import DashboardController from '../../controllers/auth/DashboardController.js';
 import TouristEntityController from '../../controllers/auth/TouristEntityController.js';
 import TourismEntitiesImagesController from '../../controllers/auth/TourismEntitiesImagesController.js';
 import SeasonEntityController from '../../controllers/auth/SeasonEntityController.js';
@@ -10,6 +11,25 @@ import upload from '../../config/multer.js';
 
 
 const router = express.Router();
+
+
+// Route สำหรับดึงจำนวนผู้เยี่ยมชมทั้งหมด
+router.get('/dashboard/visitors/total', DashboardController.getTotalVisitors);
+
+// Route สำหรับดึงจำนวนผู้เยี่ยมชมต่อวัน
+router.get('/dashboard/visitors/daily', DashboardController.getVisitorsByDay);
+
+// Route สำหรับดึงจำนวนผู้เยี่ยมชมต่อสัปดาห์
+router.get('/dashboard/visitors/weekly', DashboardController.getVisitorsByWeek);
+
+// Route สำหรับดึงจำนวนผู้เยี่ยมชมต่อเดือน
+router.get('/dashboard/visitors/monthly', DashboardController.getVisitorsByMonth);
+
+// Route สำหรับดึงจำนวนผู้เยี่ยมชมต่อเดือน
+router.get('/dashboard/visitors/yearly', DashboardController.getVisitorsByYear);
+
+// Route สำหรับดึงจำนวนสถานที่ท่องเที่ยว, ที่พัก, ร้านอาหาร, ร้านค้าของฝาก
+router.get('/dashboard/entities/counts', DashboardController.getEntityCounts);
 
 router.get('/search', TouristEntityController.searchTouristEntities);
 
