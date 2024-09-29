@@ -139,7 +139,7 @@ INSERT INTO `district` (`id`, `name`) VALUES
 CREATE TABLE `operating_hours` (
   `id` int(7) NOT NULL,
   `place_id` int(7) NOT NULL,
-  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Everyday','Except Holidays') NOT NULL,
   `opening_time` time DEFAULT NULL,
   `closing_time` time DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
