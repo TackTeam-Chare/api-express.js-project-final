@@ -424,26 +424,70 @@ const getIdByName = async (name) => {
     }
 };
 
+// อันเก่าที่เกิดปัญหา get ไม่ได้
+// const getTouristEntitiesBySeason = async (req, res) => {
+//     try {
+//         const id = req.params.id;
+//         const userLat = req.query.lat;  // Get user's latitude from query parameters
+//         const userLng = req.query.lng;  // Get user's longitude from query parameters
+        
+//         const query = `
+//             SELECT
+//                 te.*,
+//                 s.name AS season_name, 
+//                 ti.image_path AS images,
+//                 d.name AS district_name,
+//                 GROUP_CONCAT(
+//                     DISTINCT CONCAT(
+//                         oh.day_of_week, ': ',
+//                         TIME_FORMAT(oh.opening_time, '%h:%i %p'), ' - ',
+//                         TIME_FORMAT(oh.closing_time, '%h:%i %p')
+//                     ) ORDER BY oh.day_of_week SEPARATOR '\n'
+//                 ) AS operating_hours,
+//                 (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
+//             FROM
+//                 tourist_entities te
+//                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+//                 JOIN seasons s ON sr.season_id = s.id
+//                 LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
+//                 LEFT JOIN operating_hours oh ON te.id = oh.place_id
+//                 JOIN district d ON te.district_id = d.id
+//                 JOIN categories c ON te.category_id = c.id
+//             WHERE 
+//                 sr.season_id = ?
+//                 AND c.name = 'สถานที่ท่องเที่ยว'
+//             GROUP BY 
+//                 te.id
+//             ORDER BY distance ASC
+//         `;
+//         const [rows] = await pool.query(query, [userLat, userLng, userLat, id]);
+        
+//         rows.forEach(row => {
+//             if (row.images) {
+//                 row.images = row.images.split(',').map(imagePath => ({
+//                     image_path: imagePath,
+//                     image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+//                 }));
+//             }
+//         });
+//         res.json(rows);
+//     } catch (error) {
+//         console.error('Error fetching tourist entities by season:', error);
+//         res.status(500).json({
+//             error: 'Internal server error'
+//         });
+//     }
+// };
+
 const getTouristEntitiesBySeason = async (req, res) => {
     try {
         const id = req.params.id;
-        const userLat = req.query.lat;  // Get user's latitude from query parameters
-        const userLng = req.query.lng;  // Get user's longitude from query parameters
-        
         const query = `
             SELECT
                 te.*,
-                s.name AS season_name, 
-                ti.image_path AS images,
-                d.name AS district_name,
-                GROUP_CONCAT(
-                    DISTINCT CONCAT(
-                        oh.day_of_week, ': ',
-                        TIME_FORMAT(oh.opening_time, '%h:%i %p'), ' - ',
-                        TIME_FORMAT(oh.closing_time, '%h:%i %p')
-                    ) ORDER BY oh.day_of_week SEPARATOR '\n'
-                ) AS operating_hours,
-                (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
+                s.name AS season_name,
+                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+                d.name AS district_name
             FROM
                 tourist_entities te
                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
@@ -454,14 +498,12 @@ const getTouristEntitiesBySeason = async (req, res) => {
                 JOIN categories c ON te.category_id = c.id
             WHERE 
                 sr.season_id = ?
-                AND c.name = 'สถานที่ท่องเที่ยว'
-            GROUP BY 
-                te.id
-            ORDER BY distance ASC
+                AND c.id = 1
+            GROUP BY
+                te.id, s.name, d.name
         `;
-        const [rows] = await pool.query(query, [userLat, userLng, userLat, id]);
-        
-        rows.forEach(row => {
+        const [rows] = await pool.query(query, [id]);
+         rows.forEach(row => {
             if (row.images) {
                 row.images = row.images.split(',').map(imagePath => ({
                     image_path: imagePath,
@@ -469,15 +511,17 @@ const getTouristEntitiesBySeason = async (req, res) => {
                 }));
             }
         });
+        console.log('Executing query:', query);
+        console.log('With parameters:', [id]);
+
         res.json(rows);
     } catch (error) {
         console.error('Error fetching tourist entities by season:', error);
         res.status(500).json({
-            error: 'Internal server error'
+            error: error.message
         });
     }
 };
-
 
 const getTouristEntitiesByCategory = async (req, res) => {
     try {

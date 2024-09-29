@@ -120,20 +120,28 @@ const getTouristEntityById = async (req, res) => {
             WHERE te.id = ?
             GROUP BY te.id, sr.season_id
         `;
+
         const [rows] = await pool.query(query, [id]);
         const touristEntity = rows[0];
-        
+
+        // Handle operating_hours
         if (touristEntity && touristEntity.operating_hours) {
-            touristEntity.operating_hours = JSON.parse(`[${touristEntity.operating_hours}]`);
+            try {
+                touristEntity.operating_hours = JSON.parse(`[${touristEntity.operating_hours}]`);
+            } catch (parseError) {
+                console.error('Error parsing operating_hours:', parseError);
+                touristEntity.operating_hours = []; // fallback to empty array if parsing fails
+            }
         }
 
+        // Handle images
         if (touristEntity && touristEntity.images) {
             touristEntity.images = touristEntity.images.split(',').map(image => ({
                 image_path: image,
                 image_url: `${process.env.BASE_URL}/uploads/${image}`,
             }));
         }
-        
+
         if (touristEntity) {
             res.json(touristEntity);
         } else {
@@ -144,6 +152,7 @@ const getTouristEntityById = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 
 const getNearbyTouristEntitiesHandler = async (req, res) => {
     try {
