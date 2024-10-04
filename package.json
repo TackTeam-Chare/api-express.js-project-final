@@ -19,14 +19,17 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "file-type": "^19.5.0",
     "geolib": "^3.3.4",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.0",
     "path": "^0.12.7",
     "react-loader-spinner": "^6.1.6",
+    "sharp": "^0.33.5",
     "socket.io": "^4.7.5",
-    "url": "^0.11.3"
+    "url": "^0.11.3",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.24.7",

@@ -58,27 +58,29 @@ const getImageById = async (req, res) => {
 const createImage = async (req, res) => {
     try {
         const tourism_entities_id = req.body.tourism_entities_id;
-        const image_path = req.file.filename;
+        const imageFiles = req.files; // `req.files` contains an array of uploaded images
 
-        // ตรวจสอบว่ามีรูปภาพสำหรับ tourism_entities_id นี้อยู่แล้วหรือไม่
+        // Check the number of existing images
         const [existingImages] = await pool.query('SELECT id FROM tourism_entities_images WHERE tourism_entities_id = ?', [tourism_entities_id]);
-        if (existingImages.length > 0) {
-            return res.status(400).json({ error: 'Image already exists for this tourism entity' });
+        if (existingImages.length + imageFiles.length > 10) {
+            return res.status(400).json({ error: 'You can upload a maximum of 10 images per entity' });
         }
 
-        const query = 'INSERT INTO tourism_entities_images (tourism_entities_id, image_path) VALUES (?, ?)';
-        const [result] = await pool.query(query, [tourism_entities_id, image_path]);
+        const insertPromises = imageFiles.map((file) => {
+            const query = 'INSERT INTO tourism_entities_images (tourism_entities_id, image_path) VALUES (?, ?)';
+            return pool.query(query, [tourism_entities_id, file.filename]);
+        });
+
+        await Promise.all(insertPromises); // Insert all files asynchronously
 
         res.json({
-            message: 'Image uploaded successfully',
-            id: result.insertId
+            message: 'Images uploaded successfully'
         });
     } catch (error) {
-        console.error('Error creating image:', error);
+        console.error('Error creating images:', error);
         res.status(500).json({ error: error.message });
     }
 };
-
 
 // อัพเดทภาพที่มีอยู่เดิม
 const updateImages = async (req, res) => {
