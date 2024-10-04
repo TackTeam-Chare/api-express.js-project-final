@@ -352,7 +352,7 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
         // Insert the tourist entity
         const [result] = await conn.query(
             'INSERT INTO tourist_entities (name, description, location, latitude, longitude, district_id, category_id, created_by, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, description, location, latitude, longitude, district_id, category_id, created_by, isPublished] 
+            [name, description, location, latitude, longitude, district_id, category_id, created_by, isPublished]
         );
 
         const tourismEntitiesId = result.insertId;
@@ -380,13 +380,31 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
         if (operatingHours && operatingHours.length > 0) {
             const operatingHoursData = JSON.parse(operatingHours);
             for (const hour of operatingHoursData) {
-                await conn.query(
-                    'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                    [tourismEntitiesId, hour.day_of_week, hour.opening_time, hour.closing_time]
-                );
+                if (hour.day_of_week === 'Everyday') {
+                    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    for (const day of allDays) {
+                        await conn.query(
+                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                            [tourismEntitiesId, day, hour.opening_time, hour.closing_time]
+                        );
+                    }
+                } else if (hour.day_of_week === 'ExceptHolidays') {
+                    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                    for (const weekday of weekdays) {
+                        await conn.query(
+                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                            [tourismEntitiesId, weekday, hour.opening_time, hour.closing_time]
+                        );
+                    }
+                } else {
+                    await conn.query(
+                        'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                        [tourismEntitiesId, hour.day_of_week, hour.opening_time, hour.closing_time]
+                    );
+                }
             }
         }
-        
+
         await conn.commit();
         return tourismEntitiesId;
     } catch (error) {
@@ -396,6 +414,7 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
         conn.release();
     }
 };
+
 
 const updateTouristEntity = async (req, res) => {
     const id = req.params.id;
@@ -438,20 +457,19 @@ const updateTouristEntity = async (req, res) => {
 const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => { 
     const { name, description, location, latitude, longitude, district_id, category_id, published } = touristEntity;
 
-    // const isPublished = published === 'true' ? 1 : 0;
     const isPublished = published === 'true' || published === 1 || published === '1' ? 1 : 0;
-
 
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
 
-        // ตัด rating ออกจาก query
+        // Update tourist entity details
         const [result] = await conn.query(
             'UPDATE tourist_entities SET name=?, description=?, location=?, latitude=?, longitude=?, district_id=?, category_id=?, published=? WHERE id=?',
             [name, description, location, latitude, longitude, district_id, category_id, isPublished, id]
         );
 
+        // Update images if provided
         if (imagePaths && imagePaths.length > 0) {
             await conn.query('DELETE FROM tourism_entities_images WHERE tourism_entities_id = ?', [id]);
             const imageInsertPromises = imagePaths.map(imagePath =>
@@ -463,6 +481,7 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
             await Promise.all(imageInsertPromises);
         }
 
+        // Update season relation
         if (season_id) {
             await conn.query('DELETE FROM seasons_relation WHERE tourism_entities_id = ?', [id]);
             await conn.query(
@@ -471,21 +490,37 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
             );
         }
 
+        // Update operating hours
         if (operating_hours && operating_hours.length > 0) {
             await conn.query('DELETE FROM operating_hours WHERE place_id = ?', [id]);
             const operatingHoursData = JSON.parse(operating_hours);
             for (const hour of operatingHoursData) {
-                await conn.query(
-                    'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                    [id, hour.day_of_week, hour.opening_time, hour.closing_time]
-                );
+                if (hour.day_of_week === 'Everyday') {
+                    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    for (const day of allDays) {
+                        await conn.query(
+                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                            [id, day, hour.opening_time, hour.closing_time]
+                        );
+                    }
+                } else if (hour.day_of_week === 'ExceptHolidays') {
+                    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                    for (const weekday of weekdays) {
+                        await conn.query(
+                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                            [id, weekday, hour.opening_time, hour.closing_time]
+                        );
+                    }
+                } else {
+                    await conn.query(
+                        'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                        [id, hour.day_of_week, hour.opening_time, hour.closing_time]
+                    );
+                }
             }
         }
 
         await conn.commit();
-
-        await logTouristEntity(id);
-
         return result.affectedRows;
     } catch (error) {
         await conn.rollback();
@@ -494,6 +529,7 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
         conn.release();
     }
 };
+
 
 const checkDuplicateName = async (req, res) => {
     const { name } = req.query;

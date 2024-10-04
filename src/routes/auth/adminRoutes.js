@@ -45,8 +45,8 @@ router.delete('/place/:id', TouristEntityController.deleteTouristEntity); // ล
 // Images routes
 router.get('/images', TourismEntitiesImagesController.getAllImages);
 router.get('/images/:id', TourismEntitiesImagesController.getImageById);
-router.post('/images', upload.single('image_paths'), TourismEntitiesImagesController.createImage);
-router.put('/images/:id', upload.single('image_paths'), TourismEntitiesImagesController.updateImages);
+router.post('/insert-images-place', upload.array('image_paths', 10), TourismEntitiesImagesController.createImage);
+router.put('/update-images-place/:id', upload.single('image_paths'), TourismEntitiesImagesController.updateImages);
 router.delete('/images/:id', TourismEntitiesImagesController.deleteImage);
 
 // Operating Hours
