@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.0",
+    "openai": "^4.67.1",
     "path": "^0.12.7",
     "react-loader-spinner": "^6.1.6",
     "sharp": "^0.33.5",
