@@ -2,20 +2,18 @@ import pool from '../../config/db.js';
 import District from '../auth/DistrictEntityController.js';
 import Category from '../auth/CategoryEntityController.js';
 
-const logTouristEntity = async (id) => {
-    const query = 'SELECT `id`, `name`, `description`, `location`, `latitude`, `longitude`, `district_id`, `category_id`, `created_date`, `created_by`, `published` FROM `tourist_entities` WHERE `id` = ?';
-    const [rows] = await pool.query(query, [id]);
-    console.log('Tourist entity data:', rows[0]);
-};
-
 const searchTouristEntities = async (req, res) => {
-    const { q } = req.query;
+    const {
+        q
+    } = req.query;
     try {
         const results = await search(q);
         res.json(results);
     } catch (error) {
         console.error('Error searching tourist entities:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message
+        });
     }
 };
 
@@ -68,9 +66,9 @@ const getAllTouristEntities = async (req, res) => {
             GROUP BY 
                 te.id;
         `;
-        
+
         const [entities] = await pool.query(query);
-        
+
         entities.forEach(entity => {
             if (entity.images) {
                 entity.images = entity.images.split(',').map(imagePath => ({
@@ -85,7 +83,7 @@ const getAllTouristEntities = async (req, res) => {
         });
 
         res.json(entities);
-        
+
     } catch (error) {
         console.error('Error fetching tourist entities:', error);
         res.status(500).json({
@@ -104,13 +102,13 @@ const getTouristEntityById = async (req, res) => {
                 d.name AS district_name, 
                 GROUP_CONCAT(ti.image_path) AS images,
                 sr.season_id,
-                GROUP_CONCAT(
+                CONCAT('[', GROUP_CONCAT(
                     JSON_OBJECT(
                         'day_of_week', oh.day_of_week,
-                        'opening_time', DATE_FORMAT(oh.opening_time, '%H:%i'),
-                        'closing_time', DATE_FORMAT(oh.closing_time, '%H:%i')
+                        'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), 'null'),
+                        'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), 'null')
                     ) ORDER BY oh.day_of_week
-                ) AS operating_hours
+                ), ']') AS operating_hours
             FROM tourist_entities te
             JOIN categories c ON te.category_id = c.id
             JOIN district d ON te.district_id = d.id
@@ -124,10 +122,10 @@ const getTouristEntityById = async (req, res) => {
         const [rows] = await pool.query(query, [id]);
         const touristEntity = rows[0];
 
-        // Handle operating_hours
+        // Handle operating_hours parsing
         if (touristEntity && touristEntity.operating_hours) {
             try {
-                touristEntity.operating_hours = JSON.parse(`[${touristEntity.operating_hours}]`);
+                touristEntity.operating_hours = JSON.parse(touristEntity.operating_hours || '[]');
             } catch (parseError) {
                 console.error('Error parsing operating_hours:', parseError);
                 touristEntity.operating_hours = []; // fallback to empty array if parsing fails
@@ -145,14 +143,17 @@ const getTouristEntityById = async (req, res) => {
         if (touristEntity) {
             res.json(touristEntity);
         } else {
-            res.status(404).json({ error: 'Tourist entity not found' });
+            res.status(404).json({
+                error: 'Tourist entity not found'
+            });
         }
     } catch (error) {
         console.error('Error fetching tourist entity:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({
+            error: 'Internal server error'
+        });
     }
 };
-
 
 const getNearbyTouristEntitiesHandler = async (req, res) => {
     try {
@@ -210,7 +211,6 @@ const getTouristEntityDetailsById = async (id) => {
     }
     return rows[0];
 };
-
 
 const getNearbyTouristEntities = async (latitude, longitude, distance, excludeId) => {
     const query = `
@@ -280,10 +280,15 @@ const remove = async (id) => {
     }
 };
 
-const createTouristEntity = async (req, res) => {
+const createTouristEntity = async (req, res) => { 
     const touristEntity = req.body;
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
-    const { district_name, category_name, season_id, operating_hours} = touristEntity;
+    const {
+        district_name,
+        category_name,
+        season_id,
+        operating_hours
+    } = touristEntity;
 
     // Log ข้อมูลที่ได้รับจาก request
     console.log('Received Data:', touristEntity);
@@ -323,7 +328,7 @@ const createTouristEntity = async (req, res) => {
         touristEntity.created_by = req.user.id;
 
         console.log('Creating tourist entity:', touristEntity);
-        
+
         const insertId = await create(touristEntity, imagePaths, season_id, operating_hours);
 
         console.log('Tourist entity created with ID:', insertId);
@@ -340,8 +345,18 @@ const createTouristEntity = async (req, res) => {
     }
 };
 
-const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
-    const { name, description, location, latitude, longitude, district_id, category_id, created_by, published } = touristEntity;
+const create = async (touristEntity, imagePaths, season_id, operating_hours) => {
+    const {
+        name,
+        description,
+        location,
+        latitude,
+        longitude,
+        district_id,
+        category_id,
+        created_by,
+        published
+    } = touristEntity;
 
     const isPublished = published === 'true' ? 1 : 0;
 
@@ -376,33 +391,48 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
             );
         }
 
-        // Insert operating hours
-        if (operatingHours && operatingHours.length > 0) {
-            const operatingHoursData = JSON.parse(operatingHours);
-            for (const hour of operatingHoursData) {
-                if (hour.day_of_week === 'Everyday') {
-                    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                    for (const day of allDays) {
-                        await conn.query(
-                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                            [tourismEntitiesId, day, hour.opening_time, hour.closing_time]
-                        );
-                    }
-                } else if (hour.day_of_week === 'ExceptHolidays') {
-                    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-                    for (const weekday of weekdays) {
-                        await conn.query(
-                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                            [tourismEntitiesId, weekday, hour.opening_time, hour.closing_time]
-                        );
-                    }
+        // ตรวจสอบ operating_hours
+        if (operating_hours) {
+            let operatingHoursData;
+            try {
+                // ตรวจสอบว่ามันเป็น JSON string หรือไม่
+                if (typeof operating_hours === 'string') {
+                    operatingHoursData = JSON.parse(operating_hours);
                 } else {
-                    await conn.query(
-                        'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                        [tourismEntitiesId, hour.day_of_week, hour.opening_time, hour.closing_time]
-                    );
+                    operatingHoursData = operating_hours; // หากเป็น object ใช้ค่าตรงๆ
                 }
+                await conn.query('DELETE FROM operating_hours WHERE place_id = ?', [tourismEntitiesId]); // Clear existing hours
+
+                for (const hour of operatingHoursData) {
+                    if (hour.day_of_week === 'Everyday') {
+                        const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        for (const day of allDays) {
+                            await conn.query(
+                                'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                                [tourismEntitiesId, day, hour.opening_time, hour.closing_time]
+                            );
+                        }
+                    } else if (hour.day_of_week === 'ExceptHolidays') {
+                        const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                        for (const weekday of weekdays) {
+                            await conn.query(
+                                'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                                [tourismEntitiesId, weekday, hour.opening_time, hour.closing_time]
+                            );
+                        }
+                    } else {
+                        await conn.query(
+                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                            [tourismEntitiesId, hour.day_of_week, hour.opening_time, hour.closing_time]
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing operating_hours:', error);
+                throw new Error('Invalid operating_hours format');
             }
+        } else {
+            console.warn('No operating_hours data provided.');
         }
 
         await conn.commit();
@@ -415,12 +445,16 @@ const create = async (touristEntity, imagePaths, season_id, operatingHours) => {
     }
 };
 
-
 const updateTouristEntity = async (req, res) => {
     const id = req.params.id;
     const touristEntity = req.body;
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
-    const { district_name, category_name, season_id, operating_hours } = touristEntity;
+    const {
+        district_name,
+        category_name,
+        season_id,
+        operating_hours
+    } = touristEntity;
 
     console.log('Updating tourist entity with ID:', id);
     console.log('Received Data for Update:', touristEntity);
@@ -454,10 +488,19 @@ const updateTouristEntity = async (req, res) => {
     }
 };
 
-const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => { 
-    const { name, description, location, latitude, longitude, district_id, category_id, published } = touristEntity;
+const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => {
+    const {
+        name,
+        description,
+        location,
+        latitude,
+        longitude,
+        district_id,
+        category_id,
+        published
+    } = touristEntity;
 
-    const isPublished = published === 'true' || published === 1 || published === '1' ? 1 : 0;
+    const isPublished = published === 'true' ? 1 : 0;
 
     const conn = await pool.getConnection();
     try {
@@ -496,14 +539,14 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
             const operatingHoursData = JSON.parse(operating_hours);
             for (const hour of operatingHoursData) {
                 if (hour.day_of_week === 'Everyday') {
-                    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    const allDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                     for (const day of allDays) {
                         await conn.query(
                             'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
                             [id, day, hour.opening_time, hour.closing_time]
                         );
                     }
-                } else if (hour.day_of_week === 'ExceptHolidays') {
+                } else if (hour.day_of_week === 'Except Holidays') {
                     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
                     for (const weekday of weekdays) {
                         await conn.query(
@@ -530,27 +573,34 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
     }
 };
 
-
 const checkDuplicateName = async (req, res) => {
-    const { name } = req.query;
-  
+    const {
+        name
+    } = req.query;
+
     try {
-      // ตรวจสอบว่ามีชื่อนี้อยู่ในฐานข้อมูลไหม
-      const [result] = await pool.query(
-        'SELECT id FROM tourist_entities WHERE name = ?',
-        [name]
-      );
-  
-      if (result.length > 0) {
-        return res.json({ isDuplicate: true });
-      } else {
-        return res.json({ isDuplicate: false });
-      }
+        // ตรวจสอบว่ามีชื่อนี้อยู่ในฐานข้อมูลไหม
+        const [result] = await pool.query(
+            'SELECT id FROM tourist_entities WHERE name = ?',
+            [name]
+        );
+
+        if (result.length > 0) {
+            return res.json({
+                isDuplicate: true
+            });
+        } else {
+            return res.json({
+                isDuplicate: false
+            });
+        }
     } catch (error) {
-      console.error('Error checking duplicate name:', error);
-      return res.status(500).json({ error: 'Error checking duplicate name.' });
+        console.error('Error checking duplicate name:', error);
+        return res.status(500).json({
+            error: 'Error checking duplicate name.'
+        });
     }
-  };
+};
 
 export default {
     searchTouristEntities,

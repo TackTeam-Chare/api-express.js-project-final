@@ -1,5 +1,6 @@
 import express from 'express';
 import DashboardController from '../../controllers/auth/DashboardController.js';
+import ChatbotSuggestionController from '../../controllers/auth/ChatbotSuggestionController.js';
 import TouristEntityController from '../../controllers/auth/TouristEntityController.js';
 import TourismEntitiesImagesController from '../../controllers/auth/TourismEntitiesImagesController.js';
 import SeasonEntityController from '../../controllers/auth/SeasonEntityController.js';
@@ -30,6 +31,21 @@ router.get('/dashboard/visitors/yearly', DashboardController.getVisitorsByYear);
 
 // Route สำหรับดึงจำนวนสถานที่ท่องเที่ยว, ที่พัก, ร้านอาหาร, ร้านค้าของฝาก
 router.get('/dashboard/entities/counts', DashboardController.getEntityCounts);
+
+// Get all chatbot suggestions
+router.get('/chatbot-suggestions', ChatbotSuggestionController.getAllChatbotSuggestions);
+
+// Get chatbot suggestion by ID
+router.get('/chatbot-suggestions/:id', ChatbotSuggestionController.getChatbotSuggestionById);
+
+// Create a new chatbot suggestion
+router.post('/chatbot-suggestions', ChatbotSuggestionController.createChatbotSuggestion);
+
+// Update a chatbot suggestion
+router.put('/chatbot-suggestions/:id', ChatbotSuggestionController.updateChatbotSuggestion);
+
+// Delete a chatbot suggestion
+router.delete('/chatbot-suggestions/:id', ChatbotSuggestionController.deleteChatbotSuggestion);
 
 router.get('/search', TouristEntityController.searchTouristEntities);
 
