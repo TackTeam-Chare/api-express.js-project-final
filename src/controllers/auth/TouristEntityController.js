@@ -286,7 +286,7 @@ const createTouristEntity = async (req, res) => {
     const {
         district_name,
         category_name,
-        season_id,
+        season_ids,
         operating_hours
     } = touristEntity;
 
@@ -328,8 +328,10 @@ const createTouristEntity = async (req, res) => {
         touristEntity.created_by = req.user.id;
 
         console.log('Creating tourist entity:', touristEntity);
+         // ตรวจสอบและแปลง season_ids เป็น array
+        const seasonIdsArray = Array.isArray(season_ids) ? season_ids : season_ids.split(',').map(Number); 
 
-        const insertId = await create(touristEntity, imagePaths, season_id, operating_hours);
+        const insertId = await create(touristEntity, imagePaths, seasonIdsArray, operating_hours);
 
         console.log('Tourist entity created with ID:', insertId);
 
@@ -345,7 +347,7 @@ const createTouristEntity = async (req, res) => {
     }
 };
 
-const create = async (touristEntity, imagePaths, season_id, operating_hours) => {
+const create = async (touristEntity, imagePaths, season_ids, operating_hours) => {
     const {
         name,
         description,
@@ -383,13 +385,13 @@ const create = async (touristEntity, imagePaths, season_id, operating_hours) => 
             await Promise.all(imageInsertPromises);
         }
 
-        // Insert season relation
-        if (season_id) {
-            await conn.query(
-                'INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)',
-                [season_id, tourismEntitiesId]
-            );
-        }
+      // Insert multiple seasons (array of season_ids)
+      if (season_ids && season_ids.length > 0) {
+        const seasonInsertPromises = season_ids.map(season_id =>
+            conn.query('INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)', [season_id, tourismEntitiesId])
+        );
+        await Promise.all(seasonInsertPromises);
+    }
 
         // ตรวจสอบ operating_hours
         if (operating_hours) {
@@ -445,14 +447,14 @@ const create = async (touristEntity, imagePaths, season_id, operating_hours) => 
     }
 };
 
-const updateTouristEntity = async (req, res) => {
+const updateTouristEntity = async (req, res) => { 
     const id = req.params.id;
     const touristEntity = req.body;
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
     const {
         district_name,
         category_name,
-        season_id,
+        season_ids, // Changed from season_id to season_ids (an array)
         operating_hours
     } = touristEntity;
 
@@ -468,7 +470,7 @@ const updateTouristEntity = async (req, res) => {
         touristEntity.district_id = districtId;
         touristEntity.category_id = categoryId;
 
-        const affectedRows = await update(id, touristEntity, imagePaths, season_id, operating_hours);
+        const affectedRows = await update(id, touristEntity, imagePaths, season_ids, operating_hours);
         if (affectedRows > 0) {
             console.log(`Tourist entity with ID ${id} updated successfully`);
             res.json({
@@ -488,7 +490,7 @@ const updateTouristEntity = async (req, res) => {
     }
 };
 
-const update = async (id, touristEntity, imagePaths, season_id, operating_hours) => {
+const update = async (id, touristEntity, imagePaths, season_ids, operating_hours) => {
     const {
         name,
         description,
@@ -524,13 +526,16 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
             await Promise.all(imageInsertPromises);
         }
 
-        // Update season relation
-        if (season_id) {
+        // Update season relation with multiple seasons
+        if (season_ids && season_ids.length > 0) {
             await conn.query('DELETE FROM seasons_relation WHERE tourism_entities_id = ?', [id]);
-            await conn.query(
-                'INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)',
-                [season_id, id]
+            const seasonInsertPromises = season_ids.map(season_id =>
+                conn.query(
+                    'INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)',
+                    [season_id, id]
+                )
             );
+            await Promise.all(seasonInsertPromises);
         }
 
         // Update operating hours
@@ -572,6 +577,7 @@ const update = async (id, touristEntity, imagePaths, season_id, operating_hours)
         conn.release();
     }
 };
+
 
 const checkDuplicateName = async (req, res) => {
     const {
