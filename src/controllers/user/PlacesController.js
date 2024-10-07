@@ -586,7 +586,7 @@ const getTouristEntitiesByDistrict = async (req, res) => {
                 te.longitude,
                 d.name AS district_name,
                 c.name AS category_name,
-                GROUP_CONCAT(DISTINCT ti.image_path) AS image_url,
+                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
                 GROUP_CONCAT(DISTINCT s.name) AS seasons
             FROM
                 tourist_entities te
@@ -606,7 +606,16 @@ const getTouristEntitiesByDistrict = async (req, res) => {
                 te.id;
         `;
         const [rows] = await pool.query(query, [id]);
-        res.json(rows);
+        // Perform image mapping directly inside the function
+        rows.forEach(row => {
+         if (row.images) {
+             row.images = row.images.split(',').map(imagePath => ({
+                 image_path: imagePath,
+                 image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+             }));
+         }
+     });
+     res.json(rows);
     } catch (error) {
         console.error('Error fetching tourist entities by district:', error);
         res.status(500).json({
