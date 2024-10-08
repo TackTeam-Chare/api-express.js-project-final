@@ -74,13 +74,14 @@ const getSeasonsRelationById = async (req, res) => {
 // };
 const createSeasonsRelation = async (req, res) => {
     const { seasonRelations } = req.body;
+  
     try {
       const insertQuery = 'INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES ?';
       
       const values = seasonRelations.map(relation => [relation.season_id, relation.tourism_entities_id]);
-  
+    
       await pool.query(insertQuery, [values]);
-  
+    
       res.json({
         message: 'Relation created successfully',
       });
@@ -88,6 +89,7 @@ const createSeasonsRelation = async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   };
+  
   
 // Update a seasons_relation
 const updateSeasonsRelation = async (req, res) => {
