@@ -60,14 +60,22 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 const io = new Server(server, {
   cors: {
-    origin: [
-      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
-      'http://localhost:3000', // Allow localhost for development
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-  },
+    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
+    methods: ['GET', 'POST'],
+    credentials: true, // If you need cookies
+  }
 });
+
+// const io = new Server(server, {
+//   cors: {
+//     origin: [
+//       'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
+//       'http://localhost:3000', // Allow localhost for development
+//     ],
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//     credentials: true,
+//   },
+// });
 
 // WebSocket error handler
 io.on('error', (error) => {
