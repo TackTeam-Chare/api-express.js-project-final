@@ -62,7 +62,7 @@ console.log('__dirname:', __dirname);
 const io = new Server(server, {
   cors: {
     origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST','PUT','DELETE'],
     credentials: true, // If you need cookies
   }
 });
