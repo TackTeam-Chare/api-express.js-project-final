@@ -52,8 +52,6 @@ const getImageById = async (req, res) => {
     }
 };
 
-
-
 const createImage = async (req, res) => {
     try {
         const tourism_entities_id = req.body.tourism_entities_id;
