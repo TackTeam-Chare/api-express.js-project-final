@@ -96,6 +96,7 @@ router.delete('/districts/:id', DistrictEntityController.deleteDistrict); // ล
 // Categories
 router.get('/categories', CategoryEntityController.getAllCategories); // ดึงข้อมูลหมวดหมู่ทั้งหมด
 router.get('/categories/:id', CategoryEntityController.getCategoryById); // ดึงข้อมูลตามหมวดหมู่
+router.get('/categories/:id/place', CategoryEntityController.getTouristEntitiesByCategory); 
 router.post('/categories', CategoryEntityController.createCategory); // เพิ่มหมวดหมู่ใหม่
 router.put('/categories/:id', CategoryEntityController.updateCategory); // อัปเดตหมวดหมู่ตามไอดี
 router.delete('/categories/:id', CategoryEntityController.deleteCategory); // ลบหมวดหมู่ตามไอดี
