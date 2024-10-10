@@ -146,25 +146,6 @@ const deleteDistrict = async (req, res) => {
     }
 };
 
-// Get tourist entities by district ID
-const getTouristEntitiesByDistrict = async (req, res) => {
-    try {
-        const id = req.params.id;
-
-        // Validate the ID
-        if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
-            return res.status(400).json({ status: 'error', message: 'Invalid district ID' });
-        }
-
-        const query = `SELECT te.id, te.name, te.description, te.location, te.latitude, te.longitude, d.name AS district_name, c.name AS category_name, GROUP_CONCAT(DISTINCT ti.image_path) AS image_url, GROUP_CONCAT(DISTINCT s.name) AS seasons FROM tourist_entities te INNER JOIN district d ON te.district_id = d.id INNER JOIN categories c ON te.category_id = c.id LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id LEFT JOIN seasons s ON sr.season_id = s.id WHERE te.district_id = ? GROUP BY te.id;`;
-        const [rows] = await pool.query(query, [id]);
-        res.status(200).json({ status: 'success', data: rows });
-    } catch (error) {
-        console.error('Error fetching tourist entities by district:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-};
-
 // Get a district ID by name
 const getIdByName = async (name) => {
     const [rows] = await pool.query('SELECT id FROM district WHERE name = ?', [name]);
@@ -181,6 +162,4 @@ export default {
     createDistrict,
     updateDistrict,
     deleteDistrict,
-    getTouristEntitiesByDistrict,
-    getIdByName
 };
