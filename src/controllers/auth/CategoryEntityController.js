@@ -136,71 +136,10 @@ const deleteCategory = async (req, res) => {
     }
 };
 
-const getTouristEntitiesByCategory = async (req, res) => {
-    try {
-        const id = req.params.id;
-        const query = `
-            SELECT
-                te.*,
-                c.name AS category_name,
-                d.name AS district_name,
-                GROUP_CONCAT(DISTINCT tei.image_path) AS image_url,
-                GROUP_CONCAT(DISTINCT s.name ORDER BY s.id) AS season_name
-            FROM 
-                tourist_entities te
-            JOIN categories c ON te.category_id = c.id
-            JOIN district d ON te.district_id = d.id
-            LEFT JOIN tourism_entities_images tei ON te.id = tei.tourism_entities_id
-            LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN seasons s ON sr.season_id = s.id
-            WHERE 
-                te.category_id = ?
-            GROUP BY
-                te.id
-        `;
-
-        const [rows] = await pool.query(query, [id]);
-
-        rows.forEach(row => {
-            if (row.image_url) {
-                row.images = row.image_url.split(',').map(imagePath => ({
-                    image_path: imagePath,
-                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-                }));
-            }
-
-            if (row.season_name) {
-                row.season_name = row.season_name.split(',');
-            }
-        });
-
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching tourist entities by category:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-
-
-const getIdByName = async (name) => {
-    const [rows] = await pool.query('SELECT id FROM categories WHERE name = ?', [name]);
-    if (rows.length > 0) {
-        return rows[0].id;
-    } else {
-        throw new Error(`categories '${name}' not found`);
-    }
-};
-
-
 export default {
     getAllCategories,
     getCategoryById,
     createCategory,
     updateCategory,
     deleteCategory,
-    getTouristEntitiesByCategory,
-    getIdByName
 };
