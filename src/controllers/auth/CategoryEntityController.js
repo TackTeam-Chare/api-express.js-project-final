@@ -183,11 +183,24 @@ const getTouristEntitiesByCategory = async (req, res) => {
     }
 };
 
+
+
+const getIdByName = async (name) => {
+    const [rows] = await pool.query('SELECT id FROM categories WHERE name = ?', [name]);
+    if (rows.length > 0) {
+        return rows[0].id;
+    } else {
+        throw new Error(`categories '${name}' not found`);
+    }
+};
+
+
 export default {
     getAllCategories,
     getCategoryById,
     createCategory,
     updateCategory,
     deleteCategory,
-    getTouristEntitiesByCategory
+    getTouristEntitiesByCategory,
+    getIdByName
 };

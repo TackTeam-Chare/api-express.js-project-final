@@ -64,7 +64,9 @@ const getAllTouristEntities = async (req, res) => {
             LEFT JOIN 
                 seasons s ON sr.season_id = s.id
             GROUP BY 
-                te.id;
+                te.id
+            HAVING 
+                images IS NULL OR images = '';  -- กรองเฉพาะสถานที่ที่ยังไม่มีรูปภาพ
         `;
 
         const [entities] = await pool.query(query);
@@ -91,6 +93,8 @@ const getAllTouristEntities = async (req, res) => {
         });
     }
 };
+
+
 
 const getTouristEntityById = async (req, res) => {
     try {
