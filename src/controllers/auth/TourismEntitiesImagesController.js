@@ -54,25 +54,32 @@ const getImageById = async (req, res) => {
 
 
 
-// สร้างภาพใหม่
 const createImage = async (req, res) => {
     try {
         const tourism_entities_id = req.body.tourism_entities_id;
         const imageFiles = req.files; // `req.files` contains an array of uploaded images
 
+        console.log('Tourism Entity ID:', tourism_entities_id);
+        console.log('Uploaded Files:', imageFiles);
+
         // Check the number of existing images
         const [existingImages] = await pool.query('SELECT id FROM tourism_entities_images WHERE tourism_entities_id = ?', [tourism_entities_id]);
+        console.log('Number of Existing Images:', existingImages.length);
+
         if (existingImages.length + imageFiles.length > 10) {
+            console.warn('Too many images: Max is 10, but tried to upload', imageFiles.length, 'files.');
             return res.status(400).json({ error: 'You can upload a maximum of 10 images per entity' });
         }
 
         const insertPromises = imageFiles.map((file) => {
             const query = 'INSERT INTO tourism_entities_images (tourism_entities_id, image_path) VALUES (?, ?)';
+            console.log('Inserting image:', file.filename);
             return pool.query(query, [tourism_entities_id, file.filename]);
         });
 
         await Promise.all(insertPromises); // Insert all files asynchronously
 
+        console.log('All images uploaded successfully.');
         res.json({
             message: 'Images uploaded successfully'
         });
