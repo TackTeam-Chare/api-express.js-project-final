@@ -42,7 +42,7 @@ const search = async (query) => {
     return rows;
 };
 
-const getAllTouristEntities = async (req, res) => {
+const fetchTouristEntitiesWithoutImages = async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -94,7 +94,55 @@ const getAllTouristEntities = async (req, res) => {
     }
 };
 
+const getAllTouristEntities = async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                te.*, 
+                c.name AS category_name, 
+                d.name AS district_name, 
+                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+                GROUP_CONCAT(DISTINCT s.name ORDER BY s.date_start) AS season_name
+            FROM 
+                tourist_entities te
+            JOIN 
+                categories c ON te.category_id = c.id
+            JOIN 
+                district d ON te.district_id = d.id
+            LEFT JOIN 
+                tourism_entities_images ti ON te.id = ti.tourism_entities_id
+            LEFT JOIN 
+                seasons_relation sr ON te.id = sr.tourism_entities_id
+            LEFT JOIN 
+                seasons s ON sr.season_id = s.id
+            GROUP BY 
+                te.id;
+        `;
+        
+        const [entities] = await pool.query(query);
+        
+        entities.forEach(entity => {
+            if (entity.images) {
+                entity.images = entity.images.split(',').map(imagePath => ({
+                    image_path: imagePath,
+                    image_url: `${process.env.BASE_URL}/uploads/${imagePath}`,
+                }));
+            }
 
+            if (entity.season_name) {
+                entity.season_name = entity.season_name.split(','); // แยกฤดูกาลออกเป็นอาร์เรย์
+            }
+        });
+
+        res.json(entities);
+        
+    } catch (error) {
+        console.error('Error fetching tourist entities:', error);
+        res.status(500).json({
+            error: 'Internal server error'
+        });
+    }
+};
 
 const getTouristEntityById = async (req, res) => {
     try {
@@ -360,24 +408,28 @@ const create = async (touristEntity, imagePaths, season_ids, operating_hours) =>
             await Promise.all(imageInsertPromises);
         }
 
-      // Insert multiple seasons (array of season_ids)
-      if (season_ids && season_ids.length > 0) {
-        const seasonInsertPromises = season_ids.map(season_id =>
-            conn.query('INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)', [season_id, tourismEntitiesId])
-        );
-        await Promise.all(seasonInsertPromises);
-    }
+        // Insert multiple seasons (array of season_ids) only if season_ids is valid
+        if (season_ids && season_ids.length > 0 && season_ids[0] !== '') {
+            const validSeasonIds = season_ids.filter(id => id > 0); // Filter out invalid IDs
+            if (validSeasonIds.length > 0) {
+                const seasonInsertPromises = validSeasonIds.map(season_id =>
+                    conn.query('INSERT INTO seasons_relation (season_id, tourism_entities_id) VALUES (?, ?)', [season_id, tourismEntitiesId])
+                );
+                await Promise.all(seasonInsertPromises);
+            }
+        }
 
-        // ตรวจสอบ operating_hours
+        // Handle operating hours
         if (operating_hours) {
             let operatingHoursData;
             try {
-                // ตรวจสอบว่ามันเป็น JSON string หรือไม่
+                // If it's a JSON string, parse it
                 if (typeof operating_hours === 'string') {
                     operatingHoursData = JSON.parse(operating_hours);
                 } else {
-                    operatingHoursData = operating_hours; // หากเป็น object ใช้ค่าตรงๆ
+                    operatingHoursData = operating_hours; // If it's an object, use it directly
                 }
+
                 await conn.query('DELETE FROM operating_hours WHERE place_id = ?', [tourismEntitiesId]); // Clear existing hours
 
                 for (const hour of operatingHoursData) {
@@ -429,7 +481,7 @@ const updateTouristEntity = async (req, res) => {
     const {
         district_name,
         category_name,
-        season_ids, // Changed from season_id to season_ids (an array)
+        season_ids,
         operating_hours
     } = touristEntity;
 
@@ -553,7 +605,6 @@ const update = async (id, touristEntity, imagePaths, season_ids, operating_hours
     }
 };
 
-
 const checkDuplicateName = async (req, res) => {
     const {
         name
@@ -586,6 +637,7 @@ const checkDuplicateName = async (req, res) => {
 export default {
     searchTouristEntities,
     search,
+    fetchTouristEntitiesWithoutImages,
     getAllTouristEntities,
     getTouristEntityById,
     createTouristEntity,
