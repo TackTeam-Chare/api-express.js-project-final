@@ -187,7 +187,7 @@ const getTouristEntityDetailsById = async (id) => {
             LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
             LEFT JOIN seasons s ON sr.season_id = s.id  -- เพิ่มการ JOIN กับตาราง seasons
             LEFT JOIN operating_hours oh ON te.id = oh.place_id
-            WHERE te.id = ?
+            WHERE te.id = ? AND te.published = 1
             GROUP BY te.id
     `;
 
