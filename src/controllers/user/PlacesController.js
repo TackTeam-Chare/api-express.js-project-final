@@ -167,20 +167,28 @@ const getNearbyTouristEntitiesHandler = async (req, res) => {
 
 const getTouristEntityDetailsById = async (id) => {
     const entityQuery = `
-        SELECT 
-            te.*, 
-            c.name AS category_name, 
-            d.name AS district_name, 
-            GROUP_CONCAT(DISTINCT ti.image_path) AS images,
-            GROUP_CONCAT(DISTINCT s.name) AS season_name
-        FROM tourist_entities te
-        JOIN categories c ON te.category_id = c.id
-        JOIN district d ON te.district_id = d.id
-        LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
-        LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
-        LEFT JOIN seasons s ON sr.season_id = s.id
-        WHERE te.id = ? AND te.published = 1
-        GROUP BY te.id
+          SELECT 
+                te.*, 
+                c.name AS category_name, 
+                d.name AS district_name, 
+                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+                GROUP_CONCAT(DISTINCT s.name) AS season_name,
+                CONCAT('[', GROUP_CONCAT(
+                    JSON_OBJECT(
+                        'day_of_week', oh.day_of_week,
+                        'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), 'null'),
+                        'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), 'null')
+                    ) ORDER BY oh.day_of_week
+                ), ']') AS operating_hours
+            FROM tourist_entities te
+            JOIN categories c ON te.category_id = c.id
+            JOIN district d ON te.district_id = d.id
+            LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
+            LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+            LEFT JOIN seasons s ON sr.season_id = s.id  -- เพิ่มการ JOIN กับตาราง seasons
+            LEFT JOIN operating_hours oh ON te.id = oh.place_id
+            WHERE te.id = ?
+            GROUP BY te.id
     `;
 
     const hoursQuery = `
@@ -289,12 +297,14 @@ const getCurrentlyOpenTouristEntities = async (req, res) => {
         //         }));
         //     }
         // });
-        if (rows.length && rows[0].images) {
-            rows[0].images = rows[0].images.split(',').map(imagePath => ({
-                image_path: imagePath,
-                image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-            }));
-        }
+      rows.forEach(row => {
+            if (row.images) {
+                row.images = row.images.split(',').map(imagePath => ({
+                    image_path: imagePath,
+                    image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+                }));
+            }
+        });
         res.json(rows);
     } catch (error) {
         console.error('Error fetching currently open tourist entities:', error);
