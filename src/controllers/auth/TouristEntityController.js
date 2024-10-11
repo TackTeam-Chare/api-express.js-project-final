@@ -146,133 +146,69 @@ const getAllTouristEntities = async (req, res) => {
 
 const getTouristEntityById = async (req, res) => {
     try {
-        const id = req.params.id;
-        const query = `
-            SELECT 
-                te.*, 
-                c.name AS category_name, 
-                d.name AS district_name, 
-                GROUP_CONCAT(ti.image_path) AS images,
-                sr.season_id,
-                CONCAT('[', GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'day_of_week', oh.day_of_week,
-                        'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), 'null'),
-                        'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), 'null')
-                    ) ORDER BY oh.day_of_week
-                ), ']') AS operating_hours
-            FROM tourist_entities te
-            JOIN categories c ON te.category_id = c.id
-            JOIN district d ON te.district_id = d.id
-            LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN operating_hours oh ON te.id = oh.place_id
-            WHERE te.id = ?
-            GROUP BY te.id, sr.season_id
-        `;
-
-        const [rows] = await pool.query(query, [id]);
-        const touristEntity = rows[0];
-
-        // Handle operating_hours parsing
-        if (touristEntity && touristEntity.operating_hours) {
-            try {
-                touristEntity.operating_hours = JSON.parse(touristEntity.operating_hours || '[]');
-            } catch (parseError) {
-                console.error('Error parsing operating_hours:', parseError);
-                touristEntity.operating_hours = []; // fallback to empty array if parsing fails
-            }
-        }
-
-        // Handle images
-        if (touristEntity && touristEntity.images) {
-            touristEntity.images = touristEntity.images.split(',').map(image => ({
-                image_path: image,
-                image_url: `${process.env.BASE_URL}/uploads/${image}`,
-            }));
-        }
-
-        if (touristEntity) {
-            res.json(touristEntity);
-        } else {
-            res.status(404).json({
-                error: 'Tourist entity not found'
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching tourist entity:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
-};
-
-const getTouristEntityDetailsById = async (id) => {
-    const query = `
+      const id = req.params.id;
+      const query = `
         SELECT 
-            te.*, 
-            c.name AS category_name, 
-            d.name AS district_name, 
-            GROUP_CONCAT(ti.image_path) AS images,
-            GROUP_CONCAT(DISTINCT oh.day_of_week) AS days_of_week,
-            GROUP_CONCAT(DISTINCT oh.opening_time) AS opening_times,
-            GROUP_CONCAT(DISTINCT oh.closing_time) AS closing_times
+          te.*, 
+          c.name AS category_name, 
+          d.name AS district_name, 
+          GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+          GROUP_CONCAT(DISTINCT s.name) AS season_name,  -- แสดงชื่อฤดูกาล
+          CONCAT('[', GROUP_CONCAT(
+            JSON_OBJECT(
+              'day_of_week', oh.day_of_week,
+              'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), 'null'),
+              'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), 'null')
+            ) ORDER BY oh.day_of_week
+          ), ']') AS operating_hours
         FROM tourist_entities te
         JOIN categories c ON te.category_id = c.id
         JOIN district d ON te.district_id = d.id
         LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
+        LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+        LEFT JOIN seasons s ON sr.season_id = s.id  -- เพิ่มการ JOIN กับตาราง seasons
         LEFT JOIN operating_hours oh ON te.id = oh.place_id
         WHERE te.id = ?
-        GROUP BY te.id;
-    `;
-    const [rows] = await pool.query(query, [id]);
-    if (rows.length && rows[0].images) {
-        rows[0].images = rows[0].images.split(',').map(imagePath => ({
-            image_path: imagePath,
-            image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-        }));
-    }
-    return rows[0];
-};
-
-const getNearbyTouristEntities = async (latitude, longitude, distance, excludeId) => {
-    const query = `
-        SELECT te.*,
-            c.name AS category_name,
-            d.name AS district_name,
-            ST_Distance_Sphere(
-                point(te.longitude, te.latitude),
-                point(?, ?)
-            ) AS distance,
-            (SELECT GROUP_CONCAT(image_path)
-            FROM tourism_entities_images
-            WHERE tourism_entities_id = te.id) AS image_path,
-            GROUP_CONCAT(DISTINCT oh.day_of_week) AS days_of_week,
-            GROUP_CONCAT(DISTINCT oh.opening_time) AS opening_times,
-            GROUP_CONCAT(DISTINCT oh.closing_time) AS closing_times
-        FROM tourist_entities te
-        JOIN categories c ON te.category_id = c.id
-        JOIN district d ON te.district_id = d.id
-        LEFT JOIN operating_hours oh ON te.id = oh.place_id
-        WHERE te.id != ? AND te.latitude BETWEEN -90 AND 90 AND te.longitude BETWEEN -180 AND 180
-            AND ST_Distance_Sphere(
-                    point(te.longitude, te.latitude), 
-                    point(?, ?)
-                ) < ?
         GROUP BY te.id
-        ORDER BY distance;
-    `;
-    const [rows] = await pool.query(query, [longitude, latitude, excludeId, longitude, latitude, distance]);
-    rows.forEach(row => {
-        if (row.image_path) {
-            row.image_path = row.image_path.split(',').map(imagePath => ({
-                image_path: imagePath,
-                image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
-            }));
+      `;
+  
+      const [rows] = await pool.query(query, [id]);
+      const touristEntity = rows[0];
+  
+      // Handle operating_hours parsing
+      if (touristEntity && touristEntity.operating_hours) {
+        try {
+          touristEntity.operating_hours = JSON.parse(touristEntity.operating_hours || '[]');
+        } catch (parseError) {
+          console.error('Error parsing operating_hours:', parseError);
+          touristEntity.operating_hours = []; // fallback to empty array if parsing fails
         }
-    });
-    return rows;
-};
+      }
+  
+      // Handle images
+      if (touristEntity && touristEntity.images) {
+        touristEntity.images = touristEntity.images.split(',').map(image => ({
+          image_path: image,
+          image_url: `${process.env.BASE_URL}/uploads/${image}`,
+        }));
+      }
+  
+      if (touristEntity) {
+        res.json(touristEntity);
+      } else {
+        res.status(404).json({
+          error: 'Tourist entity not found'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching tourist entity:', error);
+      res.status(500).json({
+        error: 'Internal server error'
+      });
+    }
+  };
+  
+
 
 const deleteTouristEntity = async (req, res) => {
     const id = req.params.id;
@@ -474,16 +410,11 @@ const create = async (touristEntity, imagePaths, season_ids, operating_hours) =>
     }
 };
 
-const updateTouristEntity = async (req, res) => { 
+const updateTouristEntity = async (req, res) => {
     const id = req.params.id;
     const touristEntity = req.body;
     const imagePaths = req.files ? req.files.map(file => file.filename) : [];
-    const {
-        district_name,
-        category_name,
-        season_ids,
-        operating_hours
-    } = touristEntity;
+    const { district_name, category_name, season_ids, operating_hours } = touristEntity;
 
     console.log('Updating tourist entity with ID:', id);
     console.log('Received Data for Update:', touristEntity);
@@ -497,23 +428,34 @@ const updateTouristEntity = async (req, res) => {
         touristEntity.district_id = districtId;
         touristEntity.category_id = categoryId;
 
-        const affectedRows = await update(id, touristEntity, imagePaths, season_ids, operating_hours);
+        // Ensure season_ids is an array
+        let parsedSeasonIds = season_ids;
+        if (typeof season_ids === 'string') {
+            try {
+                parsedSeasonIds = JSON.parse(season_ids); // Parse JSON string to array
+            } catch (error) {
+                console.error('Error parsing season_ids:', error);
+                return res.status(400).json({ error: 'Invalid season_ids format' });
+            }
+        } else if (!Array.isArray(parsedSeasonIds)) {
+            parsedSeasonIds = []; // fallback to an empty array if no valid data
+        }
+
+        console.log("Parsed season_ids:", parsedSeasonIds);
+
+        const affectedRows = await update(id, touristEntity, imagePaths, parsedSeasonIds, operating_hours);
         if (affectedRows > 0) {
             console.log(`Tourist entity with ID ${id} updated successfully`);
             res.json({
-                message: `Tourist entity with ID ${id} updated successfully`
+                message: `Tourist entity with ID ${id} updated successfully`,
             });
         } else {
             console.log(`Tourist entity with ID ${id} not found`);
-            res.status(404).json({
-                error: 'Tourist entity not found'
-            });
+            res.status(404).json({ error: 'Tourist entity not found' });
         }
     } catch (error) {
         console.error('Error in updateTouristEntity:', error);
-        res.status(500).json({
-            error: error.message
-        });
+        res.status(500).json({ error: error.message });
     }
 };
 
@@ -529,7 +471,7 @@ const update = async (id, touristEntity, imagePaths, season_ids, operating_hours
         published
     } = touristEntity;
 
-    const isPublished = published === 'true' ? 1 : 0;
+    const isPublished = published === 'true' || published === 1 || published === '1' ? 1 : 0;
 
     const conn = await pool.getConnection();
     try {
@@ -566,32 +508,39 @@ const update = async (id, touristEntity, imagePaths, season_ids, operating_hours
         }
 
         // Update operating hours
-        if (operating_hours && operating_hours.length > 0) {
-            await conn.query('DELETE FROM operating_hours WHERE place_id = ?', [id]);
-            const operatingHoursData = JSON.parse(operating_hours);
-            for (const hour of operatingHoursData) {
-                if (hour.day_of_week === 'Everyday') {
-                    const allDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                    for (const day of allDays) {
+        if (operating_hours && typeof operating_hours === 'string' && operating_hours.length > 0) {
+            try {
+                const operatingHoursData = JSON.parse(operating_hours);
+
+                await conn.query('DELETE FROM operating_hours WHERE place_id = ?', [id]);
+
+                for (const hour of operatingHoursData) {
+                    if (hour.day_of_week === 'Everyday') {
+                        const allDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        for (const day of allDays) {
+                            await conn.query(
+                                'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                                [id, day, hour.opening_time, hour.closing_time]
+                            );
+                        }
+                    } else if (hour.day_of_week === 'Except Holidays') {
+                        const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                        for (const weekday of weekdays) {
+                            await conn.query(
+                                'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
+                                [id, weekday, hour.opening_time, hour.closing_time]
+                            );
+                        }
+                    } else {
                         await conn.query(
                             'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                            [id, day, hour.opening_time, hour.closing_time]
+                            [id, hour.day_of_week, hour.opening_time, hour.closing_time]
                         );
                     }
-                } else if (hour.day_of_week === 'Except Holidays') {
-                    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-                    for (const weekday of weekdays) {
-                        await conn.query(
-                            'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                            [id, weekday, hour.opening_time, hour.closing_time]
-                        );
-                    }
-                } else {
-                    await conn.query(
-                        'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
-                        [id, hour.day_of_week, hour.opening_time, hour.closing_time]
-                    );
                 }
+            } catch (parseError) {
+                console.error('Error parsing operating_hours:', parseError);
+                // If parsing fails, fallback to no update on operating hours
             }
         }
 
@@ -604,6 +553,8 @@ const update = async (id, touristEntity, imagePaths, season_ids, operating_hours
         conn.release();
     }
 };
+
+
 
 const checkDuplicateName = async (req, res) => {
     const {
