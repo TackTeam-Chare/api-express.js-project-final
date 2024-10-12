@@ -33,20 +33,34 @@ const getSeasonById = async (req, res) => {
     }
 };
 
-// Create a new season
 const createSeason = async (req, res) => {
-    const season = req.body;
+    const { name, date_start, date_end } = req.body;
+
     try {
-        const query = 'INSERT INTO seasons SET ?';
-        const [result] = await pool.query(query, season);
-        res.json({
+        // Check if the season name already exists
+        const checkQuery = 'SELECT COUNT(*) as count FROM seasons WHERE name = ?';
+        const [rows] = await pool.query(checkQuery, [name]);
+
+        if (rows[0].count > 0) {
+            return res.status(409).json({
+                status: 'duplicate',
+                message: 'Season name already exists, please choose a different name.'
+            });
+        }
+
+        // If no duplicate, proceed with the creation
+        const query = 'INSERT INTO seasons (name, date_start, date_end) VALUES (?, ?, ?)';
+        const [result] = await pool.query(query, [name, date_start, date_end]);
+        res.status(201).json({
             message: 'Season created successfully',
             id: result.insertId
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+
 
 // Update a season
 const updateSeason = async (req, res) => {
@@ -80,21 +94,6 @@ const deleteSeason = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-const getIdByName = async (name) => {
-    try {
-        const [rows] = await pool.query('SELECT id FROM seasons WHERE name = ?', [name]);
-        if (rows.length > 0) {
-            return rows[0].id;
-        } else {
-            throw new Error(`Season '${name}' not found`);
-        }
-    } catch (error) {
-        console.error('Error fetching season id by name:', error);
-        throw error;
-    }
-};
-
 
 export default {
     getAllSeasons,
