@@ -138,62 +138,83 @@ const createOperatingHours = async (req, res) => {
     }
   };
   
+// const updateOperatingHours = async (req, res) => {
+//     const id = req.params.id;
+//     const { place_id, day_of_week, opening_time, closing_time } = req.body;
+
+//     // Validate required fields
+//     if (!place_id || !day_of_week || !opening_time || !closing_time) {
+//         return res.status(400).json({
+//             error: 'place_id, day_of_week, opening_time, and closing_time are required.'
+//         });
+//     }
+
+//     // Validate day_of_week
+//     const validDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+//     if (!validDays.includes(day_of_week)) {
+//         return res.status(400).json({
+//             error: `Invalid day_of_week. Must be one of: ${validDays.join(', ')}`
+//         });
+//     }
+
+//     // Validate that opening_time is earlier than closing_time
+//     if (opening_time >= closing_time) {
+//         return res.status(400).json({
+//             error: 'opening_time must be earlier than closing_time.'
+//         });
+//     }
+
+//     // Check for overlapping hours for the same place and day (excluding the current entry being updated)
+//     try {
+//         const checkQuery = `SELECT * FROM operating_hours WHERE place_id = ? AND day_of_week = ? AND id != ? AND (
+//             (opening_time <= ? AND closing_time > ?) OR
+//             (opening_time < ? AND closing_time >= ?)
+//         )`;
+//         const [overlappingHours] = await pool.query(checkQuery, [place_id, day_of_week, id, closing_time, opening_time, closing_time, opening_time]);
+
+//         if (overlappingHours.length > 0) {
+//             return res.status(409).json({
+//                 error: 'Operating hours overlap with an existing entry for this place and day.'
+//             });
+//         }
+
+//         // Proceed to update the operating hours
+//         const query = 'UPDATE operating_hours SET ? WHERE id = ?';
+//         const [result] = await pool.query(query, [{ place_id, day_of_week, opening_time, closing_time }, id]);
+//         if (result.affectedRows > 0) {
+//             res.json({ message: `Operating hours with ID ${id} updated successfully` });
+//         } else {
+//             res.status(404).json({ error: 'Operating hours not found' });
+//         }
+//     } catch (error) {
+//         console.error('Error updating operating hours:', error);
+//         res.status(500).json({
+//             error: error.message
+//         });
+//     }
+// };
+
 const updateOperatingHours = async (req, res) => {
-    const id = req.params.id;
-    const { place_id, day_of_week, opening_time, closing_time } = req.body;
+  const id = req.params.id;
+  const { place_id, day_of_week, opening_time, closing_time } = req.body;
 
-    // Validate required fields
-    if (!place_id || !day_of_week || !opening_time || !closing_time) {
-        return res.status(400).json({
-            error: 'place_id, day_of_week, opening_time, and closing_time are required.'
-        });
-    }
+  try {
+      // Proceed to update the operating hours directly
+      const query = 'UPDATE operating_hours SET ? WHERE id = ?';
+      const [result] = await pool.query(query, [{ place_id, day_of_week, opening_time, closing_time }, id]);
 
-    // Validate day_of_week
-    const validDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    if (!validDays.includes(day_of_week)) {
-        return res.status(400).json({
-            error: `Invalid day_of_week. Must be one of: ${validDays.join(', ')}`
-        });
-    }
-
-    // Validate that opening_time is earlier than closing_time
-    if (opening_time >= closing_time) {
-        return res.status(400).json({
-            error: 'opening_time must be earlier than closing_time.'
-        });
-    }
-
-    // Check for overlapping hours for the same place and day (excluding the current entry being updated)
-    try {
-        const checkQuery = `SELECT * FROM operating_hours WHERE place_id = ? AND day_of_week = ? AND id != ? AND (
-            (opening_time <= ? AND closing_time > ?) OR
-            (opening_time < ? AND closing_time >= ?)
-        )`;
-        const [overlappingHours] = await pool.query(checkQuery, [place_id, day_of_week, id, closing_time, opening_time, closing_time, opening_time]);
-
-        if (overlappingHours.length > 0) {
-            return res.status(409).json({
-                error: 'Operating hours overlap with an existing entry for this place and day.'
-            });
-        }
-
-        // Proceed to update the operating hours
-        const query = 'UPDATE operating_hours SET ? WHERE id = ?';
-        const [result] = await pool.query(query, [{ place_id, day_of_week, opening_time, closing_time }, id]);
-        if (result.affectedRows > 0) {
-            res.json({ message: `Operating hours with ID ${id} updated successfully` });
-        } else {
-            res.status(404).json({ error: 'Operating hours not found' });
-        }
-    } catch (error) {
-        console.error('Error updating operating hours:', error);
-        res.status(500).json({
-            error: error.message
-        });
-    }
+      if (result.affectedRows > 0) {
+          res.json({ message: `Operating hours with ID ${id} updated successfully` });
+      } else {
+          res.status(404).json({ error: 'Operating hours not found' });
+      }
+  } catch (error) {
+      console.error('Error updating operating hours:', error);
+      res.status(500).json({
+          error: error.message
+      });
+  }
 };
-
 
 // Delete an operating hours
 const deleteOperatingHours = async (req, res) => {

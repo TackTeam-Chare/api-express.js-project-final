@@ -33,19 +33,33 @@ const getChatbotSuggestionById = async (req, res) => {
 
 // Create a new chatbot suggestion
 const createChatbotSuggestion = async (req, res) => {
-    const { category, suggestion_text, active } = req.body;
-    try {
-      const query = 'INSERT INTO chatbot_suggestions (category, suggestion_text, active) VALUES (?, ?, ?)';
-      const [result] = await pool.query(query, [category, suggestion_text, active || 1]); // Use default value if not provided
-      res.json({
-        message: 'Chatbot suggestion created successfully',
-        id: result.insertId
+  const { category, suggestion_text, active } = req.body;
+  try {
+    // Check if the suggestion already exists
+    const checkQuery = 'SELECT COUNT(*) as count FROM chatbot_suggestions WHERE category = ? AND suggestion_text = ?';
+    const [rows] = await pool.query(checkQuery, [category, suggestion_text]);
+    const suggestionExists = rows[0].count > 0;
+
+    if (suggestionExists) {
+      return res.status(409).json({ // Return status 409 for duplicates
+        status: 'duplicate',
+        message: 'This suggestion already exists. Please choose a different suggestion.',
       });
-    } catch (error) {
-      console.error('Error creating chatbot suggestion:', error);
-      res.status(500).json({ error: 'Internal server error' });
     }
-  };
+
+    // If the suggestion doesn't exist, insert it
+    const query = 'INSERT INTO chatbot_suggestions (category, suggestion_text, active) VALUES (?, ?, ?)';
+    const [result] = await pool.query(query, [category, suggestion_text, active ? 1 : 0]);
+    res.status(201).json({
+      message: 'Chatbot suggestion created successfully',
+      id: result.insertId,
+    });
+  } catch (error) {
+    console.error('Error creating chatbot suggestion:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 
 // Update a chatbot suggestion
 const updateChatbotSuggestion = async (req, res) => {
