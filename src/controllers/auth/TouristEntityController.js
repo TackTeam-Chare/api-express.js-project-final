@@ -1,7 +1,7 @@
 import pool from '../../config/db.js';
 import District from '../auth/DistrictEntityController.js';
 import Category from '../auth/CategoryEntityController.js';
-
+import { io } from '../../app.js';
 const searchTouristEntities = async (req, res) => {
     const {
         q
@@ -118,7 +118,7 @@ const getAllTouristEntities = async (req, res) => {
             GROUP BY 
                 te.id
             ORDER BY 
-                te.id DESC;
+                te.created_date DESC; -- เรียงจากใหม่ไปเก่า
         `;
         
         const [entities] = await pool.query(query);
@@ -294,7 +294,15 @@ const createTouristEntity = async (req, res) => {
         const seasonIdsArray = Array.isArray(season_ids) ? season_ids : season_ids.split(',').map(Number); 
 
         const insertId = await create(touristEntity, imagePaths, seasonIdsArray, operating_hours);
+        const newTouristEntity = {
+            id: insertId,
+            name: touristEntity.name,
+            category_name: category_name,
+            images: imagePaths.map(path => ({ image_url: `/uploads/${path}` })),
+            location: touristEntity.location
+        };
 
+        io.emit('newTouristEntity', newTouristEntity);
         console.log('Tourist entity created with ID:', insertId);
 
         res.json({
@@ -447,8 +455,20 @@ const updateTouristEntity = async (req, res) => {
         console.log("Parsed season_ids:", parsedSeasonIds);
 
         const affectedRows = await update(id, touristEntity, imagePaths, parsedSeasonIds, operating_hours);
+
+        
         if (affectedRows > 0) {
             console.log(`Tourist entity with ID ${id} updated successfully`);
+             // Emit event to Socket.io for real-time update
+             const newTouristEntity = {
+                id: id,
+                name: touristEntity.name,
+                category_name: category_name,
+                images: imagePaths.map(path => ({ image_url: `/uploads/${path}` })),
+                location: touristEntity.location
+            };
+
+            io.emit('newTouristEntity', newTouristEntity);
             res.json({
                 message: `Tourist entity with ID ${id} updated successfully`,
             });
