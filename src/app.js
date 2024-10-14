@@ -59,7 +59,7 @@ console.log('__filename:', __filename);
 console.log('__dirname:', __dirname);
 
 // CORS configuration for WebSocket (Socket.IO)
-export const io = new Server(server, {
+const io = new Server(server, {
   cors: {
     origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
     methods: ['GET', 'POST','PUT','DELETE'],
@@ -130,3 +130,6 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception thrown:', err);
 });
+
+// **Important: Export the app for Vercel**
+export default app;
