@@ -41,8 +41,7 @@ const processChatbotQuestion = async (questionData, socket) => {
     }
 
     // 2. Tourist Attractions, Restaurants, and Souvenir Shops Closing Soon
-    // if (question.includes("ใกล้ปิด")) 
-    {
+    if (question.includes("ใกล้ปิด")) {
       if (question.includes("สถานที่ท่องเที่ยวที่จะปิดเวลาทำการเเล้ว")) {
         await getTouristAttractionsClosingSoon(socket);
       } else if (question.includes("ร้านอาหารที่จะปิดเวลาทำการเเล้ว")) {
@@ -54,8 +53,7 @@ const processChatbotQuestion = async (questionData, socket) => {
     }
 
     // 3. Tourist Attractions, Restaurants, and Souvenir Shops Opening Soon
-    // if (question.includes("ใกล้เปิด")) 
-      {
+    if (question.includes("ใกล้เปิด")) {
       if (question.includes("สถานที่ท่องเที่ยวที่ใกล้จะเปิดเวลาทำการให้เยี่ยมชมเเล้ว")) {
         await getTouristAttractionsOpeningSoon(socket);
       } else if (question.includes("ร้านอาหารที่ใกล้จะเปิดเวลาทำการเเล้ว")) {
@@ -194,7 +192,6 @@ const processChatbotQuestion = async (questionData, socket) => {
         }
       }
     }
-    
 
     // 5. Fallback to Google Places API if no relevant data found
     if (!hasRelevantData) {
@@ -214,14 +211,18 @@ const processChatbotQuestion = async (questionData, socket) => {
       // 6. Fallback to GPT-4 if no Google Places data found
       if (!hasRelevantData) {
         const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-          model: 'gpt-4',
+          model: 'gpt-4o',
           messages: [{ role: 'user', content: question }],
         }, {
           headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }
         });
 
-        const aiMessage = gptResponse.data.choices[0].message.content;
-        socket.emit('botMessage', aiMessage);
+        if (gptResponse.data && gptResponse.data.choices) {
+          const aiMessage = gptResponse.data.choices[0].message.content;
+          socket.emit('botMessage', aiMessage);
+        } else {
+          socket.emit('botMessage', 'ไม่สามารถตอบคำถามได้ในขณะนี้');
+        }
       }
     }
 

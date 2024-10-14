@@ -2,15 +2,17 @@ import pool from '../../config/db.js';
 
 // Get all chatbot suggestions
 const getAllChatbotSuggestions = async (req, res) => {
-    try {
-        const query = 'SELECT * FROM chatbot_suggestions';
-        const [suggestions] = await pool.query(query);
-        res.json(suggestions);
-    } catch (error) {
-        console.error('Error fetching chatbot suggestions:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+  try {
+      // ORDER BY created_at DESC เพื่อเรียงข้อมูลจากใหม่ไปเก่า
+      const query = 'SELECT * FROM chatbot_suggestions ORDER BY created_at DESC';
+      const [suggestions] = await pool.query(query);
+      res.json(suggestions);
+  } catch (error) {
+      console.error('Error fetching chatbot suggestions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
 };
+
 
 // Get chatbot suggestion by ID
 const getChatbotSuggestionById = async (req, res) => {
@@ -31,34 +33,34 @@ const getChatbotSuggestionById = async (req, res) => {
     }
 };
 
-// Create a new chatbot suggestion
+// Create a new chatbot suggestion with multiple categories support
 const createChatbotSuggestion = async (req, res) => {
   const { category, suggestion_text, active } = req.body;
+
   try {
-    // Check if the suggestion already exists
-    const checkQuery = 'SELECT COUNT(*) as count FROM chatbot_suggestions WHERE category = ? AND suggestion_text = ?';
-    const [rows] = await pool.query(checkQuery, [category, suggestion_text]);
-    const suggestionExists = rows[0].count > 0;
+    // Iterate over the array of categories and insert each with the same suggestion
+    const insertPromises = category.map(async (cat) => {
+      const checkQuery = 'SELECT COUNT(*) as count FROM chatbot_suggestions WHERE category = ? AND suggestion_text = ?';
+      const [rows] = await pool.query(checkQuery, [cat, suggestion_text]);
+      const suggestionExists = rows[0].count > 0;
 
-    if (suggestionExists) {
-      return res.status(409).json({ // Return status 409 for duplicates
-        status: 'duplicate',
-        message: 'This suggestion already exists. Please choose a different suggestion.',
-      });
-    }
+      if (!suggestionExists) {
+        const query = 'INSERT INTO chatbot_suggestions (category, suggestion_text, active) VALUES (?, ?, ?)';
+        await pool.query(query, [cat, suggestion_text, active ? 1 : 0]);
+      }
+    });
 
-    // If the suggestion doesn't exist, insert it
-    const query = 'INSERT INTO chatbot_suggestions (category, suggestion_text, active) VALUES (?, ?, ?)';
-    const [result] = await pool.query(query, [category, suggestion_text, active ? 1 : 0]);
+    await Promise.all(insertPromises); // Wait for all categories to be processed
+
     res.status(201).json({
-      message: 'Chatbot suggestion created successfully',
-      id: result.insertId,
+      message: 'Chatbot suggestion created successfully for all selected categories',
     });
   } catch (error) {
     console.error('Error creating chatbot suggestion:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 // Update a chatbot suggestion

@@ -116,7 +116,9 @@ const getAllTouristEntities = async (req, res) => {
             LEFT JOIN 
                 seasons s ON sr.season_id = s.id
             GROUP BY 
-                te.id;
+                te.id
+            ORDER BY 
+                te.id DESC;
         `;
         
         const [entities] = await pool.query(query);
@@ -143,6 +145,7 @@ const getAllTouristEntities = async (req, res) => {
         });
     }
 };
+
 
 const getTouristEntityById = async (req, res) => {
     try {

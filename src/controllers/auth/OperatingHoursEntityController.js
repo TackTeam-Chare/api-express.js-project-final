@@ -1,27 +1,30 @@
 import pool from '../../config/db.js';
 
 const getAllOperatingHours = async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                oh.*, 
-                te.name AS place_name 
-            FROM 
-                operating_hours oh 
-            JOIN 
-                tourist_entities te 
-            ON 
-                oh.place_id = te.id
-        `;
-        const [operatingHours] = await pool.query(query);
-        res.json(operatingHours);
-    } catch (error) {
-        console.error('Error fetching operating hours:', error);
-        res.status(500).json({
-            error: 'Internal server error'
-        });
-    }
+  try {
+      const query = `
+          SELECT 
+              oh.*, 
+              te.name AS place_name 
+          FROM 
+              operating_hours oh 
+          JOIN 
+              tourist_entities te 
+          ON 
+              oh.place_id = te.id
+          ORDER BY 
+              oh.id DESC
+      `;
+      const [operatingHours] = await pool.query(query);
+      res.json(operatingHours);
+  } catch (error) {
+      console.error('Error fetching operating hours:', error);
+      res.status(500).json({
+          error: 'Internal server error'
+      });
+  }
 };
+
 
 // const createOperatingHours = async (req, res) => {
 //     const { place_id, day_of_week, opening_time, closing_time } = req.body;

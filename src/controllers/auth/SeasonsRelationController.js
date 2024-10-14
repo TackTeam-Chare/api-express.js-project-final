@@ -20,6 +20,7 @@ const getAllSeasonsRelations = async (req, res) => {
             FROM seasons_relation sr
             JOIN seasons s ON sr.season_id = s.id
             JOIN tourist_entities te ON sr.tourism_entities_id = te.id
+            ORDER BY sr.id DESC
         `;
         const [relations] = await pool.query(query);
         res.json(relations);
@@ -28,6 +29,7 @@ const getAllSeasonsRelations = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 
 
 // Get seasons_relation by ID

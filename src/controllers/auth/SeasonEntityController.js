@@ -4,7 +4,7 @@ import pool from '../../config/db.js';
 
 const getAllSeasons = async (req, res) => {
     try {
-        const query = 'SELECT * FROM seasons';
+        const query = 'SELECT * FROM seasons ORDER BY id DESC';
         const [seasons] = await pool.query(query);
         res.json(seasons);
     } catch (error) {
@@ -14,6 +14,7 @@ const getAllSeasons = async (req, res) => {
         });
     }
 };
+
 
 // Get season by ID
 const getSeasonById = async (req, res) => {

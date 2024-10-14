@@ -4,7 +4,7 @@ import pool from '../../config/db.js';
 
 const getAllCategories = async (req, res) => {
     try {
-        const query = 'SELECT * FROM categories';
+        const query = 'SELECT * FROM categories ORDER BY id DESC';
         const [categories] = await pool.query(query);
         res.json(categories);
     } catch (error) {
@@ -14,6 +14,7 @@ const getAllCategories = async (req, res) => {
         });
     }
 };
+
 
 const getCategoryById = async (req, res) => {
     try {

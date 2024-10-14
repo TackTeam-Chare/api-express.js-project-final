@@ -21,6 +21,7 @@ const getAllImages = async (req, res) => {
             SELECT tii.id, tii.tourism_entities_id, tii.image_path, te.name as tourism_entity_name
             FROM tourism_entities_images tii
             JOIN tourist_entities te ON tii.tourism_entities_id = te.id
+            ORDER BY tii.id DESC
         `;
         const [images] = await pool.query(query);
         images.forEach(image => {
@@ -32,6 +33,7 @@ const getAllImages = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 // ดึงภาพตามไอดี
 const getImageById = async (req, res) => {
     try {

@@ -3,7 +3,7 @@ import pool from '../../config/db.js';
 // Get all districts
 const getAllDistricts = async (req, res) => {
     try {
-        const query = 'SELECT * FROM district';
+        const query = 'SELECT * FROM district ORDER BY id DESC';
         const [districts] = await pool.query(query);
         res.status(200).json(districts);
     } catch (error) {
@@ -14,6 +14,7 @@ const getAllDistricts = async (req, res) => {
         });
     }
 };
+
 
 // Get a district by ID
 const getDistrictById = async (req, res) => {

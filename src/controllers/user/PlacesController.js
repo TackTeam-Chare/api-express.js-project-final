@@ -364,13 +364,71 @@ const getTouristEntitiesByTime = async (req, res) => {
 };
 
 // Function to fetch tourist entities by season real-time with image handling
+// const getTouristEntitiesBySeasonRealTime = async (req, res) => {
+//     try {
+//         const currentDate = new Date();
+//         const month = currentDate.getMonth() + 1;
+//         const userLat = req.query.lat;  // Get user's latitude from query parameters
+//         const userLng = req.query.lng;  // Get user's longitude from query parameters
+
+//         let seasonId;
+//         if (month >= 3 && month <= 5) {
+//             seasonId = await getIdByName('ฤดูร้อน');
+//         } else if (month >= 6 && month <= 8) {
+//             seasonId = await getIdByName('ฤดูฝน');
+//         } else if (month >= 9 && month <= 11) {
+//             seasonId = await getIdByName('ฤดูหนาว');
+//         } else {
+//             seasonId = await getIdByName('ตลอดทั้งปี');
+//         }
+
+//         const query = `
+//             SELECT
+//                 te.*, 
+//                 MAX(s.name) AS season_name,
+//                 MAX(d.name) AS district_name,
+//                 GROUP_CONCAT(DISTINCT tei.image_path) AS images,
+//                 (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
+//             FROM
+//                 tourist_entities te
+//                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+//                 JOIN seasons s ON sr.season_id = s.id
+//                 JOIN district d ON te.district_id = d.id
+//                 LEFT JOIN tourism_entities_images tei ON te.id = tei.tourism_entities_id
+//             WHERE 
+//                 te.category_id = 1  
+//                 AND (sr.season_id = ? OR sr.season_id = (SELECT id FROM seasons WHERE name = 'ตลอดทั้งปี'))
+//             GROUP BY
+//                 te.id
+//             ORDER BY distance ASC  -- Order by nearest distance
+//         `;
+
+//         const [rows] = await pool.query(query, [userLat, userLng, userLat, seasonId]);
+
+//         rows.forEach(row => {
+//             if (row.images) {
+//                 row.images = row.images.split(',').map(imagePath => ({
+//                     image_path: imagePath,
+//                     image_url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/${imagePath}`
+//                 }));
+//             }
+//         });
+
+//         res.json(rows);
+
+//     } catch (error) {
+//         console.error('Error fetching tourist entities by season:', error);
+//         res.status(500).json({
+//             error: 'Internal server error'
+//         });
+//     }
+// };
 const getTouristEntitiesBySeasonRealTime = async (req, res) => {
     try {
         const currentDate = new Date();
         const month = currentDate.getMonth() + 1;
-        const userLat = req.query.lat;  // Get user's latitude from query parameters
-        const userLng = req.query.lng;  // Get user's longitude from query parameters
 
+        // Determine season based on the current month
         let seasonId;
         if (month >= 3 && month <= 5) {
             seasonId = await getIdByName('ฤดูร้อน');
@@ -382,13 +440,13 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
             seasonId = await getIdByName('ตลอดทั้งปี');
         }
 
+        // SQL query to fetch tourist entities only (category_id = 1)
         const query = `
             SELECT
                 te.*, 
                 MAX(s.name) AS season_name,
                 MAX(d.name) AS district_name,
-                GROUP_CONCAT(DISTINCT tei.image_path) AS images,
-                (6371 * ACOS(COS(RADIANS(?)) * COS(RADIANS(te.latitude)) * COS(RADIANS(te.longitude) - RADIANS(?)) + SIN(RADIANS(?)) * SIN(RADIANS(te.latitude)))) AS distance
+                GROUP_CONCAT(DISTINCT tei.image_path) AS images
             FROM
                 tourist_entities te
                 JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
@@ -400,11 +458,11 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
                 AND (sr.season_id = ? OR sr.season_id = (SELECT id FROM seasons WHERE name = 'ตลอดทั้งปี'))
             GROUP BY
                 te.id
-            ORDER BY distance ASC  -- Order by nearest distance
         `;
 
-        const [rows] = await pool.query(query, [userLat, userLng, userLat, seasonId]);
+        const [rows] = await pool.query(query, [seasonId]);
 
+        // Perform image mapping directly inside the function
         rows.forEach(row => {
             if (row.images) {
                 row.images = row.images.split(',').map(imagePath => ({
@@ -414,6 +472,7 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
             }
         });
 
+        // Send the response with the modified rows
         res.json(rows);
 
     } catch (error) {
@@ -423,7 +482,6 @@ const getTouristEntitiesBySeasonRealTime = async (req, res) => {
         });
     }
 };
-
 
 const getIdByName = async (name) => {
     const [rows] = await pool.query('SELECT id FROM seasons WHERE name = ?', [name]);
