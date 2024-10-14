@@ -8,4 +8,4 @@ coverage
 coverage.lcov
 *.swp
 *.bak
-*.tgz
+*.tgz".env" 
