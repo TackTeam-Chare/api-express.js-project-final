@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import userRoutes from './routes/user/userRoutes.js';
 import adminRoutes from './routes/auth/adminRoutes.js';
+import generalRoutes from './routes/auth/general/generalRoutes.js';
 import authRoutes from './routes/auth/authRoutes.js';
 import authenticateJWT from './middleware/authMiddleware.js';
 import logVisitor from './middleware/logVisitor.js';
@@ -60,14 +61,22 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 const io = new Server(server, {
   cors: {
-    origin: [
-      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
-      'http://localhost:3000', // Allow localhost for development
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-  },
+    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
+    methods: ['GET', 'POST','PUT','DELETE'],
+    credentials: true, // If you need cookies
+  }
 });
+
+// const io = new Server(server, {
+//   cors: {
+//     origin: [
+//       'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
+//       'http://localhost:3000', // Allow localhost for development
+//     ],
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//     credentials: true,
+//   },
+// });
 
 // WebSocket error handler
 io.on('error', (error) => {
@@ -109,6 +118,8 @@ app.use('/auth', authRoutes);
 
 // Admin Routes (with JWT authentication)
 app.use('/admin', authenticateJWT, adminRoutes);
+
+app.use('/admin/general', authenticateJWT, generalRoutes);
 
 // Catch all route errors
 app.use((err, req, res, next) => {
