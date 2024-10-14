@@ -34,7 +34,7 @@ app.use((err, req, res, next) => {
 app.use(
   cors({
     origin: [
-      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
+      'https://nakhon-phanom-travel-recommendation-thesis-final-ready.vercel.app', // Allow Vercel domain
       'http://localhost:3000', // Allow localhost for development
     ],
     methods: 'GET,POST,PUT,DELETE',
@@ -44,7 +44,7 @@ app.use(
 );
 
 console.log(
-  'CORS configuration applied for: https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app and localhost:3000'
+  'CORS configuration applied for: https://nakhon-phanom-travel-recommendation-thesis-final-ready.vercel.app and localhost:3000'
 );
 
 app.use(bodyParser.json());
@@ -61,7 +61,7 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 const io = new Server(server, {
   cors: {
-    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
+    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final-ready.vercel.app', 'http://localhost:3000'], // Adjust accordingly
     methods: ['GET', 'POST','PUT','DELETE'],
     credentials: true, // If you need cookies
   }
