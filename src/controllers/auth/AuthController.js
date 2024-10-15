@@ -25,6 +25,18 @@ const createAdminHandler = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+const createAdmin = async (admin) => {
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO admin (username, password, name) VALUES (?, ?, ?)',
+            [admin.username, admin.password, admin.name]
+        );
+        return result.insertId; // ส่งคืนค่า insertId เพื่อใช้ในส่วนอื่นๆ เช่นการสร้าง JWT token
+    } catch (error) {
+        console.error('Error inserting admin:', error);
+        throw new Error('Database insert failed');
+    }
+};
 
 const storeToken = async (adminId, token) => {
     try {
