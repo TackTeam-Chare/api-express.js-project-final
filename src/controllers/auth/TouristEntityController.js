@@ -1,6 +1,7 @@
 import pool from '../../config/db.js';
 import District from '../auth/DistrictEntityController.js';
 import Category from '../auth/CategoryEntityController.js';
+import { io } from '../../app.js';
 const searchTouristEntities = async (req, res) => {
     const {
         q
@@ -115,13 +116,9 @@ const getAllTouristEntities = async (req, res) => {
             LEFT JOIN 
                 seasons s ON sr.season_id = s.id
             GROUP BY 
-<<<<<<< HEAD
                 te.id
             ORDER BY 
                 te.created_date DESC; -- เรียงจากใหม่ไปเก่า
-=======
-                te.id;
->>>>>>> 7fdc2b91c081cef3e71461c25fc62b10ad50aceb
         `;
         
         const [entities] = await pool.query(query);
@@ -148,6 +145,7 @@ const getAllTouristEntities = async (req, res) => {
         });
     }
 };
+
 
 const getTouristEntityById = async (req, res) => {
     try {
@@ -296,6 +294,15 @@ const createTouristEntity = async (req, res) => {
         const seasonIdsArray = Array.isArray(season_ids) ? season_ids : season_ids.split(',').map(Number); 
 
         const insertId = await create(touristEntity, imagePaths, seasonIdsArray, operating_hours);
+        const newTouristEntity = {
+            id: insertId,
+            name: touristEntity.name,
+            category_name: category_name,
+            images: imagePaths.map(path => ({ image_url: `/uploads/${path}` })),
+            location: touristEntity.location
+        };
+
+        io.emit('newTouristEntity', newTouristEntity);
         console.log('Tourist entity created with ID:', insertId);
 
         res.json({
@@ -374,7 +381,7 @@ const create = async (touristEntity, imagePaths, season_ids, operating_hours) =>
 
                 for (const hour of operatingHoursData) {
                     if (hour.day_of_week === 'Everyday') {
-                        const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                         for (const day of allDays) {
                             await conn.query(
                                 'INSERT INTO operating_hours (place_id, day_of_week, opening_time, closing_time) VALUES (?, ?, ?, ?)',
@@ -448,8 +455,20 @@ const updateTouristEntity = async (req, res) => {
         console.log("Parsed season_ids:", parsedSeasonIds);
 
         const affectedRows = await update(id, touristEntity, imagePaths, parsedSeasonIds, operating_hours);
+
+        
         if (affectedRows > 0) {
             console.log(`Tourist entity with ID ${id} updated successfully`);
+             // Emit event to Socket.io for real-time update
+             const newTouristEntity = {
+                id: id,
+                name: touristEntity.name,
+                category_name: category_name,
+                images: imagePaths.map(path => ({ image_url: `/uploads/${path}` })),
+                location: touristEntity.location
+            };
+
+            io.emit('newTouristEntity', newTouristEntity);
             res.json({
                 message: `Tourist entity with ID ${id} updated successfully`,
             });
