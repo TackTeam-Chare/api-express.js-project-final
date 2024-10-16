@@ -31,12 +31,12 @@ app.use((err, req, res, next) => {
 app.use(
   cors({
     origin: [
-      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', // Allow Vercel domain
-      'http://localhost:3000', // Allow localhost for development
+      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app',
+      'http://localhost:3000',
     ],
     methods: 'GET,POST,PUT,DELETE',
-    credentials: true, // Allow cookies and credentials
-    allowedHeaders: ['Content-Type', 'Authorization'], 
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
@@ -58,10 +58,13 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 export const io = new Server(server, {
   cors: {
-    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
-    methods: ['GET', 'POST','PUT','DELETE'],
-    credentials: true, // If you need cookies
-  }
+    origin: [
+      'https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app',
+      'http://localhost:3000',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  },
 });
 
 // WebSocket error handler
@@ -73,7 +76,6 @@ io.on('error', (error) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Handle incoming messages from user
   socket.on('userMessage', async (message) => {
     console.log('Received message from user:', message);
     try {
@@ -84,7 +86,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
@@ -93,7 +94,6 @@ io.on('connection', (socket) => {
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// Console log for static file path
 console.log('Serving static files from /uploads');
 
 // User Routes
@@ -104,18 +104,12 @@ app.use('/auth', authRoutes);
 
 // Admin Routes (with JWT authentication)
 app.use('/admin', authenticateJWT, adminRoutes);
-
 app.use('/admin/general', authenticateJWT, generalRoutes);
 
 // Catch all route errors
 app.use((err, req, res, next) => {
   console.error('Route Error:', err);
   res.status(500).json({ error: 'Internal server error' });
-});
-
-// Log when the server is running
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
 });
 
 // Handle unhandled promise rejections
@@ -127,3 +121,6 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception thrown:', err);
 });
+
+// Export server instance for Vercel
+export default server;
