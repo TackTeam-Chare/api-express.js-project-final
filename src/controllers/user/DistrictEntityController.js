@@ -2,7 +2,7 @@ import pool from '../../config/db.js';
 
 const getAllDistricts = async (req, res) => {
     try {
-        const query = 'SELECT * FROM district';
+        const query = 'SELECT * FROM district ORDER BY id DESC';
         const [districts] = await pool.query(query);
         res.json(districts);
     } catch (error) {
