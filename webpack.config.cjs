@@ -1,17 +1,11 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/app.js', // เส้นทางไปยังไฟล์ app.js
-  output: {
-    filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist'),
-  },
-  mode: 'production',
+  entry: './src/app.js',
   target: 'node',
-  resolve: {
-    fallback: {
-      "bufferutil": false,
-      "utf-8-validate": false,
-    }
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'bundle.js',
   },
+  externalsPresets: { node: true },
 };

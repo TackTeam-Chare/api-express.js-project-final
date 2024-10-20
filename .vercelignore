@@ -3,3 +3,6 @@ node_modules/
 .next/
 logs/
 *.log
+*.test.js
+tests
+coverage
