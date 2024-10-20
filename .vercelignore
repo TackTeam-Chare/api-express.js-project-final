@@ -1,4 +1,5 @@
 node_modules/
-coverage/
+.git/
+.next/
 logs/
-tmp/
+*.log
