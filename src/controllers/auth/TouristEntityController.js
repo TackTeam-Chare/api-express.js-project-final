@@ -149,67 +149,80 @@ const getAllTouristEntities = async (req, res) => {
 
 const getTouristEntityById = async (req, res) => {
     try {
-      const id = req.params.id;
-      const query = `
-        SELECT 
-          te.*, 
-          c.name AS category_name, 
-          d.name AS district_name, 
-          GROUP_CONCAT(DISTINCT ti.image_path) AS images,
-          GROUP_CONCAT(DISTINCT s.name) AS season_name,  -- แสดงชื่อฤดูกาล
-          CONCAT('[', GROUP_CONCAT(
-            JSON_OBJECT(
-              'day_of_week', oh.day_of_week,
-              'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), 'null'),
-              'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), 'null')
-            ) ORDER BY oh.day_of_week
-          ), ']') AS operating_hours
-        FROM tourist_entities te
-        JOIN categories c ON te.category_id = c.id
-        JOIN district d ON te.district_id = d.id
-        LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
-        LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
-        LEFT JOIN seasons s ON sr.season_id = s.id  -- เพิ่มการ JOIN กับตาราง seasons
-        LEFT JOIN operating_hours oh ON te.id = oh.place_id
-        WHERE te.id = ?
-        GROUP BY te.id
-      `;
-  
-      const [rows] = await pool.query(query, [id]);
-      const touristEntity = rows[0];
-  
-      // Handle operating_hours parsing
-      if (touristEntity && touristEntity.operating_hours) {
-        try {
-          touristEntity.operating_hours = JSON.parse(touristEntity.operating_hours || '[]');
-        } catch (parseError) {
-          console.error('Error parsing operating_hours:', parseError);
-          touristEntity.operating_hours = []; // fallback to empty array if parsing fails
+        const id = req.params.id;
+        const query = `
+            SELECT 
+                te.*, 
+                c.name AS category_name, 
+                d.name AS district_name, 
+                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+                GROUP_CONCAT(DISTINCT s.name) AS season_name, 
+                CONCAT(
+                    '[', 
+                    GROUP_CONCAT(
+                        DISTINCT JSON_OBJECT(
+                            'day_of_week', oh.day_of_week,
+                            'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), NULL),
+                            'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), NULL)
+                        ) 
+                    ORDER BY oh.day_of_week), 
+                    ']'
+                ) AS operating_hours
+            FROM tourist_entities te
+            JOIN categories c ON te.category_id = c.id
+            JOIN district d ON te.district_id = d.id
+            LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
+            LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+            LEFT JOIN seasons s ON sr.season_id = s.id
+            LEFT JOIN operating_hours oh ON te.id = oh.place_id
+            WHERE te.id = ?
+            GROUP BY te.id
+        `;
+
+        const [rows] = await pool.query(query, [id]);
+        let touristEntity = rows[0];
+
+        console.log('Tourist Entity:', JSON.stringify(touristEntity, null, 2));
+
+        // ตรวจสอบและจัดการ operating_hours
+        if (touristEntity && touristEntity.operating_hours) {
+            try {
+                const operatingHours = JSON.parse(touristEntity.operating_hours || '[]');
+                touristEntity.operating_hours = operatingHours.length > 0 ? operatingHours : null;
+                console.log('Operating Hours:', touristEntity.operating_hours);
+            } catch (parseError) {
+                console.error('Error parsing operating_hours:', parseError);
+                touristEntity.operating_hours = null;
+            }
         }
-      }
-  
-      // Handle images
-      if (touristEntity && touristEntity.images) {
-        touristEntity.images = touristEntity.images.split(',').map(image => ({
-          image_path: image,
-          image_url: `${process.env.BASE_URL}/uploads/${image}`,
-        }));
-      }
-  
-      if (touristEntity) {
-        res.json(touristEntity);
-      } else {
-        res.status(404).json({
-          error: 'Tourist entity not found'
-        });
-      }
+
+        // จัดการรูปภาพ
+        if (touristEntity && touristEntity.images) {
+            touristEntity.images = touristEntity.images.split(',').map(image => ({
+                image_path: image,
+                image_url: `${process.env.BASE_URL}/uploads/${image}`,
+            }));
+        }
+
+        // ลบค่า null หรือ undefined ออกจากผลลัพธ์
+        const cleanEntity = Object.fromEntries(
+            Object.entries(touristEntity).filter(([_, value]) => value != null)
+        );
+
+        // ส่งข้อมูลกลับไปยัง Frontend เฉพาะที่มีค่า
+        if (Object.keys(cleanEntity).length > 0) {
+            res.json(cleanEntity);
+        } else {
+            res.status(404).json({ error: 'Tourist entity not found' });
+        }
     } catch (error) {
-      console.error('Error fetching tourist entity:', error);
-      res.status(500).json({
-        error: 'Internal server error'
-      });
+        console.error('Error fetching tourist entity:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-  };
+};
+
+
+
   
 
 

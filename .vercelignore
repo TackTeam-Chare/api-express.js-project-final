@@ -1,8 +1,0 @@
-node_modules/
-.git/
-.next/
-logs/
-*.log
-*.test.js
-tests
-coverage

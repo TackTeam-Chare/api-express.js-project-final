@@ -158,6 +158,7 @@ const getTouristEntitiesByCategory = async (req, res) => {
                 te.category_id = ?
             GROUP BY
                 te.id
+            ORDER BY id DESC
         `;
 
         const [rows] = await pool.query(query, [id]);
