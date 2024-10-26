@@ -58,10 +58,7 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 export const io = new Server(server, {
   cors: {
-    origin: [
-      'https://nakhon-phanom-travel-production.up.railway.app/',
-      'http://localhost:3000'
-    ],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
