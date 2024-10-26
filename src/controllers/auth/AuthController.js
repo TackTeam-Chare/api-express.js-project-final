@@ -110,16 +110,19 @@ const updateProfileHandler = async (req, res) => {
         let updates = [];
         let values = [];
 
+        // Check if the name has changed
         if (name && name !== currentAdmin.name) {
             updates.push('name = ?');
             values.push(name);
         }
 
+        // Check if the username has changed
         if (username && username !== currentAdmin.username) {
             updates.push('username = ?');
             values.push(username);
         }
 
+        // Check if the password has changed
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
             if (await bcrypt.compare(password, currentAdmin.password)) {
@@ -129,6 +132,7 @@ const updateProfileHandler = async (req, res) => {
             values.push(hashedPassword);
         }
 
+        // If there are no updates, return an error
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No updates provided or same as current values' });
         }
@@ -142,6 +146,23 @@ const updateProfileHandler = async (req, res) => {
             res.status(404).json({ error: 'Admin not found' });
         }
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+const verifyPasswordHandler = async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const [rows] = await pool.query('SELECT * FROM admin WHERE username = ?', [username]);
+        const admin = rows[0];
+        if (admin && await bcrypt.compare(password, admin.password)) {
+            res.json({ verified: true });
+        } else {
+            res.status(401).json({ verified: false });
+        }
+    } catch (error) {
+        console.error('Verify password error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -161,28 +182,13 @@ const logoutHandler = async (req, res) => {
     }
 };
 
-const verifyPasswordHandler = async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        const [rows] = await pool.query('SELECT * FROM admin WHERE username = ?', [username]);
-        const admin = rows[0];
-        if (admin && await bcrypt.compare(password, admin.password)) {
-            res.json({ verified: true });
-        } else {
-            res.status(401).json({ verified: false });
-        }
-    } catch (error) {
-        console.error('Verify password error:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
 
 export default {
     createAdminHandler,
     storeToken,
     loginHandler,
-    verifyPasswordHandler,
     getProfileHandler,
+    verifyPasswordHandler,
     updateProfileHandler,
     logoutHandler,
 };
