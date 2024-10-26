@@ -19,6 +19,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
 // Log the server start
 console.log('Initializing server...');
 
@@ -31,12 +33,9 @@ app.use((err, req, res, next) => {
 // CORS configuration for HTTP requests
 app.use(
   cors({
-    origin: [
-      'https://nakhon-phanom-travel-production.up.railway.app/', // Allow Vercel domain
-      'http://localhost:3000', // Allow localhost for development
-    ],
+    origin: allowedOrigins,
     methods: 'GET,POST,PUT,DELETE',
-    credentials: true, // Allow cookies and credentials
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
