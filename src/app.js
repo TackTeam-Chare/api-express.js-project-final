@@ -32,17 +32,17 @@ app.use((err, req, res, next) => {
 app.use(
   cors({
     origin: [
-      'https://nakhon-phanom-travel-recommendation-thesis-final-ready.vercel.app', // Allow Vercel domain
+      'https://nakhon-phanom-travel-production.up.railway.app/', // Allow Vercel domain
       'http://localhost:3000', // Allow localhost for development
     ],
     methods: 'GET,POST,PUT,DELETE',
     credentials: true, // Allow cookies and credentials
-    allowedHeaders: ['Content-Type', 'Authorization'], 
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
 console.log(
-  'CORS configuration applied for: https://nakhon-phanom-travel-recommendation-thesis-final-ready.vercel.app and localhost:3000'
+  'CORS configuration applied for: https://nakhon-phanom-travel-production.up.railway.app/ and localhost:3000'
 );
 
 app.use(bodyParser.json());
@@ -59,9 +59,13 @@ console.log('__dirname:', __dirname);
 // CORS configuration for WebSocket (Socket.IO)
 export const io = new Server(server, {
   cors: {
-    origin: ['https://nakhon-phanom-travel-recommendation-thesis-final.vercel.app', 'http://localhost:3000'], // Adjust accordingly
-    methods: ['GET', 'POST','PUT','DELETE'],
-    credentials: true, // If you need cookies
+    origin: [
+      'https://nakhon-phanom-travel-production.up.railway.app/',
+      'http://localhost:3000'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   }
 });
 
@@ -70,11 +74,9 @@ io.on('error', (error) => {
   console.error('WebSocket error:', error);
 });
 
-// WebSocket connection event
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Handle incoming messages from user
   socket.on('userMessage', async (message) => {
     console.log('Received message from user:', message);
     try {
@@ -85,7 +87,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });

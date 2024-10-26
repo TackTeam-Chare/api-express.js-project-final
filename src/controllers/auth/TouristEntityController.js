@@ -151,38 +151,40 @@ const getTouristEntityById = async (req, res) => {
     try {
         const id = req.params.id;
         const query = `
-            SELECT 
-                te.*, 
-                c.name AS category_name, 
-                d.name AS district_name, 
-                GROUP_CONCAT(DISTINCT ti.image_path) AS images,
-                GROUP_CONCAT(DISTINCT s.name) AS season_name, 
-                CONCAT(
-                    '[', 
-                    GROUP_CONCAT(
-                        DISTINCT JSON_OBJECT(
-                            'day_of_week', oh.day_of_week,
-                            'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), NULL),
-                            'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), NULL)
-                        ) 
-                    ORDER BY oh.day_of_week), 
-                    ']'
-                ) AS operating_hours
-            FROM tourist_entities te
-            JOIN categories c ON te.category_id = c.id
-            JOIN district d ON te.district_id = d.id
-            LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
-            LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
-            LEFT JOIN seasons s ON sr.season_id = s.id
-            LEFT JOIN operating_hours oh ON te.id = oh.place_id
-            WHERE te.id = ?
-            GROUP BY te.id
+           SELECT 
+    te.*, 
+    c.name AS category_name, 
+    d.name AS district_name, 
+    GROUP_CONCAT(DISTINCT ti.image_path) AS images,
+    GROUP_CONCAT(DISTINCT s.id) AS season_ids, -- แก้ไขให้ดึง ID ของฤดูกาล
+    CONCAT(
+        '[', 
+        GROUP_CONCAT(
+            DISTINCT JSON_OBJECT(
+                'day_of_week', oh.day_of_week,
+                'opening_time', IFNULL(DATE_FORMAT(oh.opening_time, '%H:%i'), NULL),
+                'closing_time', IFNULL(DATE_FORMAT(oh.closing_time, '%H:%i'), NULL)
+            ) 
+        ORDER BY oh.day_of_week), 
+        ']'
+    ) AS operating_hours
+FROM tourist_entities te
+JOIN categories c ON te.category_id = c.id
+JOIN district d ON te.district_id = d.id
+LEFT JOIN tourism_entities_images ti ON te.id = ti.tourism_entities_id
+LEFT JOIN seasons_relation sr ON te.id = sr.tourism_entities_id
+LEFT JOIN seasons s ON sr.season_id = s.id
+LEFT JOIN operating_hours oh ON te.id = oh.place_id
+WHERE te.id = ?
+GROUP BY te.id;
+
         `;
 
         const [rows] = await pool.query(query, [id]);
         let touristEntity = rows[0];
 
         console.log('Tourist Entity:', JSON.stringify(touristEntity, null, 2));
+        console.log('Season IDs:', touristEntity.season_ids); // ตรวจสอบ Season IDs
 
         // ตรวจสอบและจัดการ operating_hours
         if (touristEntity && touristEntity.operating_hours) {
