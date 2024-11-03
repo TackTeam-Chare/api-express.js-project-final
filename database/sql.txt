@@ -7,6 +7,9 @@ ALTER TABLE seasons_relation AUTO_INCREMENT = 1;
 ALTER TABLE operating_hours AUTO_INCREMENT = 1;
 ALTER TABLE admin_tokens AUTO_INCREMENT = 1;
 
+//จำนวนข้อมูลทั้งหมด
+SELECT COUNT(*) AS total_records FROM tourist_entities;
+
 
 -- กำหนดฤดูกาลสำหรับที่พัก ร้านอาหาร และร้านค้าของฝาก
 INSERT INTO seasons_relation (season_id, tourism_entities_id)

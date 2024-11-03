@@ -101,7 +101,7 @@ const processChatbotQuestion = async (questionData, socket) => {
            FROM tourist_entities te
            JOIN categories c ON te.category_id = c.id
            WHERE c.name = 'ร้านอาหาร'
-           HAVING distance < 10
+           HAVING distance < 200
            ORDER BY distance LIMIT 10`, 
           [latitude, longitude, latitude]
         );
@@ -125,7 +125,7 @@ const processChatbotQuestion = async (questionData, socket) => {
            * cos(radians(te.longitude) - radians(?)) + sin(radians(?)) * sin(radians(te.latitude)))) AS distance
            FROM tourist_entities te
            JOIN categories c ON te.category_id = c.id
-           HAVING distance < 10
+           HAVING distance < 100
            ORDER BY distance LIMIT 10`, 
           [latitude, longitude, latitude]
         );
